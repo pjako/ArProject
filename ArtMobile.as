@@ -70,6 +70,7 @@ package
 	
 	public class ArtMobile extends Sprite
 	{
+		// awesome comment
 		
 		private var playTime:int = 20;
 		// text

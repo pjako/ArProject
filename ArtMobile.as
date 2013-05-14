@@ -132,6 +132,9 @@ package
 			
 			// Use setTo to reduce garbage
 			
+			
+
+			
 			cameraTracker.rotation.setTo(
 				v3[1].x/3.14*180,
 				v3[1].y/3.14*180,
@@ -140,13 +143,14 @@ package
 				v3[0].x,
 				v3[0].y,
 				v3[0].z);
-			view.camera.position.setTo(
+			currentCamera.position = new Vector3D(v3[0].x,v3[0].y,v3[0].z);
+				/*.setTo(
 				v3[0].x,
 				v3[0].y,
-				v3[0].z);
-			view.camera.rotationX = cameraTracker.rotation.x;
-			view.camera.rotationY = cameraTracker.rotation.y;
-			view.camera.rotationZ = cameraTracker.rotation.z;
+				v3[0].z);*/
+			currentCamera.rotationX = cameraTracker.rotation.x;
+			currentCamera.rotationY = cameraTracker.rotation.y;
+			currentCamera.rotationZ = cameraTracker.rotation.z;
 					
 			//Second Tracker
 			v3 = event.m2.decompose();

@@ -27,8 +27,8 @@ package
 		private static var bgHeight:Number = 240;
 		private static var bgTextureResolution:Number = 128;
 		// marker ids
-		private static var marker1Id:Number = 11;
-		private static var marker2Id:Number = 6;
+		private static var marker1Id:Number = 6;
+		private static var marker2Id:Number = 7;
 		private static var marker3Id:Number = 1;
 	
 		private var rgbaArray:ByteArray;
@@ -82,7 +82,7 @@ package
 			transformTackingDatatoEvent(data);
 		}
 		
-		public function transformTackingDatatoEvent(r:Array)
+		public function transformTackingDatatoEvent(r:Array) : void
 		{
 			
 			var trackerEvent:TrackEvent = new TrackEvent(TrackEvent.ON_MARKER_FRAME);

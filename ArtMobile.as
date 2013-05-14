@@ -1,3 +1,4 @@
+//test
 package
 {
 	import art.CModule;
@@ -25,7 +26,7 @@ package
 	import away3d.lights.PointLight;
 	import away3d.loaders.*;
 	import away3d.loaders.misc.*;
-	import away3d.loaders.parsers.*;
+	import away3d.loaders.parsers.*;/Users/ralph/Desktop/ArProject/ArtMobile.as
 	import away3d.materials.*;
 	import away3d.materials.lightpickers.*;
 	import away3d.materials.methods.*;

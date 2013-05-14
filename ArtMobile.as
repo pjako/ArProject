@@ -25,6 +25,7 @@ package
 	import flash.ui.MultitouchInputMode;
 	import flash.utils.Timer;
 	import flash.utils.flash_proxy;
+	import flash.net.URLRequest;
 	
 	import art.CModule;
 	import art.FlashEcho;
@@ -45,12 +46,18 @@ package
 	import away3d.entities.Mesh;
 	import away3d.entities.Sprite3D;
 	import away3d.events.MouseEvent3D;
+	import away3d.events.AssetEvent;
+	import away3d.library.assets.AssetType;
 	import away3d.lights.DirectionalLight;
 	import away3d.lights.PointLight;
+	import away3d.loaders.Loader3D;
+	import away3d.loaders.misc.AssetLoaderContext;
+	import away3d.loaders.parsers.*;
 	import away3d.materials.ColorMaterial;
 	import away3d.materials.MaterialBase;
 	import away3d.materials.TextureMaterial;
 	import away3d.materials.lightpickers.StaticLightPicker;
+	import away3d.materials.methods.FilteredShadowMapMethod;
 	import away3d.primitives.ConeGeometry;
 	import away3d.primitives.CubeGeometry;
 	import away3d.primitives.CylinderGeometry;
@@ -72,6 +79,7 @@ package
 	import awayphysics.events.AWPEvent;
 	
 	
+	
 	[SWF(backgroundColor="#000000", frameRate="20")]
 	public class ArtMobile extends Sprite {
 		private var arTracker:ARTracker;
@@ -91,6 +99,15 @@ package
 		private var light:DirectionalLight;
 		public static var lightPicker:StaticLightPicker;
 		private var lightDirection:Vector3D;
+		
+		//3d Assets loader + models *********
+		private var loader3D:Loader3D;
+		//private var modelURL:URLRequest;
+	
+		[Embed(source="../3d/tomb.awd", mimeType="application/octet-stream")]
+		public static var Model:Class;
+		[Embed(source="/../3d/Tomb01_D.png")]
+		public static var mTexture:Class;
 		
 		public function ArtMobile():void {
 			// Performance optimization
@@ -212,9 +229,32 @@ package
 			initLight();
 			currentScene = view.scene;
 			currentCamera = view.camera;
+			initAssets();
 			initPhysics();
 			initEvents();
 			initGame();
+			
+			
+		}
+		
+		private function initAssets():void {
+			
+			// 3d import
+			
+			var assetLoaderContext:AssetLoaderContext = new AssetLoaderContext();
+			assetLoaderContext.mapUrlToData("Tomb01_D.png", new mTexture());
+			
+			Parsers.enableAllBundled();
+
+			loader3D = new Loader3D(true, null);
+			loader3D.position.x=0;
+			loader3D.position.y=0;
+			loader3D.position.z=0;
+			loader3D.addEventListener(AssetEvent.ASSET_COMPLETE, onAssetComplete);
+			loader3D.loadData(new Model(),assetLoaderContext);
+
+			currentScene.addChild(loader3D);
+
 			
 		}
 		
@@ -282,6 +322,24 @@ package
 				// reset time
 				playTime = 10;
 			}*/
+		}
+		
+		private function onAssetComplete(event:AssetEvent):void {
+			//Event Handler for Assets
+			
+			if (event.asset.assetType == AssetType.MESH) {
+				var mesh:Mesh = event.asset as Mesh;
+				mesh.castsShadows = true;
+			} else if (event.asset.assetType == AssetType.MATERIAL) {
+				var material:TextureMaterial = event.asset as TextureMaterial;
+				material.shadowMethod = new FilteredShadowMapMethod(light);
+				material.lightPicker = lightPicker;
+				material.gloss = 30;
+				material.specular = 1;
+				material.ambientColor = 0x303040;
+				material.ambient = 1;
+			}
+			
 		}
 		
 		

@@ -1,84 +1,308 @@
 //test
 package
 {
+	import flash.desktop.NativeApplication;
+	import flash.desktop.SystemIdleMode;
+	import flash.display.BitmapData;
+	import flash.display.Sprite;
+	import flash.display.StageAlign;
+	import flash.display.StageQuality;
+	import flash.display.StageScaleMode;
+	import flash.display3D.Context3DCompareMode;
+	import flash.events.Event;
+	import flash.events.TimerEvent;
+	import flash.external.ExternalInterface;
+	import flash.geom.Vector3D;
+	import flash.media.Camera;
+	import flash.media.Sound;
+	import flash.media.Video;
+	import flash.system.Security;
+	import flash.system.SecurityPanel;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFormat;
+	import flash.ui.Multitouch;
+	import flash.ui.MultitouchInputMode;
+	import flash.utils.Timer;
+	import flash.utils.flash_proxy;
+	
 	import art.CModule;
 	import art.FlashEcho;
 	import art.FlashSetup;
 	import art.FlashTick;
 	import art.vfs.RootFSBackingStore;
 	
-	import away3d.animators.*;
-	import away3d.animators.data.*;
-	import away3d.animators.nodes.*;
-	import away3d.cameras.*;
-	import away3d.cameras.lenses.*;
-	import away3d.containers.*;
-	import away3d.core.base.*;
+	import away3d.arcane;
+	import away3d.cameras.Camera3D;
+	import away3d.cameras.lenses.PerspectiveLens;
+	import away3d.containers.Scene3D;
+	import away3d.containers.View3D;
 	import away3d.core.math.Vector3DUtils;
 	import away3d.core.sort.RenderableMergeSort;
 	import away3d.debug.AwayStats;
 	import away3d.debug.Trident;
 	import away3d.debug.WireframeAxesGrid;
-	import away3d.entities.*;
-	import away3d.events.*;
-	import away3d.library.assets.*;
-	import away3d.lights.*;
+	import away3d.entities.Mesh;
+	import away3d.entities.Sprite3D;
+	import away3d.events.MouseEvent3D;
+	import away3d.lights.DirectionalLight;
 	import away3d.lights.PointLight;
-	import away3d.loaders.*;
-	import away3d.loaders.misc.*;
-	import away3d.loaders.parsers.*;
-	import away3d.materials.*;
-	import away3d.materials.lightpickers.*;
-	import away3d.materials.methods.*;
-	import away3d.primitives.*;
+	import away3d.materials.ColorMaterial;
+	import away3d.materials.MaterialBase;
+	import away3d.materials.TextureMaterial;
+	import away3d.materials.lightpickers.StaticLightPicker;
+	import away3d.primitives.ConeGeometry;
+	import away3d.primitives.CubeGeometry;
+	import away3d.primitives.CylinderGeometry;
+	import away3d.primitives.NURBSGeometry;
+	import away3d.primitives.SphereGeometry;
 	import away3d.primitives.data.NURBSVertex;
 	import away3d.textures.BitmapTexture;
 	import away3d.textures.PlanarReflectionTexture;
 	import away3d.textures.WebcamTexture;
-	import away3d.tools.helpers.*;
-	import away3d.utils.*;
 	
 	import awayphysics.collision.dispatch.AWPCollisionObject;
-	import awayphysics.collision.shapes.*;
+	import awayphysics.collision.shapes.AWPBoxShape;
+	import awayphysics.collision.shapes.AWPConeShape;
+	import awayphysics.collision.shapes.AWPCylinderShape;
+	import awayphysics.collision.shapes.AWPSphereShape;
 	import awayphysics.debug.AWPDebugDraw;
-	import awayphysics.dynamics.*;
+	import awayphysics.dynamics.AWPDynamicsWorld;
+	import awayphysics.dynamics.AWPRigidBody;
 	import awayphysics.events.AWPEvent;
-	
-	import flash.desktop.NativeApplication;
-	import flash.desktop.SystemIdleMode;
-	import flash.display.*;
-	import flash.display.Sprite;
-	import flash.display3D.Context3DCompareMode;
-	import flash.events.*;
-	import flash.events.Event;
-	import flash.external.ExternalInterface;
-	import flash.geom.*;
-	import flash.media.Camera;
-	import flash.media.Sound;
-	import flash.media.Video;
-	import flash.net.*;
-	import flash.system.Security;
-	import flash.system.SecurityPanel;
-	import flash.text.*;
-	import flash.text.TextField;
-	import flash.ui.Multitouch;
-	import flash.ui.MultitouchInputMode;
-	import flash.utils.*;
 	
 	
 	[SWF(backgroundColor="#000000", frameRate="20")]
+	public class ArtMobile extends Sprite {
+		private var arTracker:ARTracker;
+		static public var currentCamera:Camera3D;
+		static public var view:View3D;
+		public static var currentScene:Scene3D;
+		public static var currentController:Controller;
+		public static var physicsWorld:AWPDynamicsWorld;
+		public static var cameraTracker:Tracker;
+		public static var tracker1:Tracker;
+		public static var tracker2:Tracker;
+		public static var debugDraw:AWPDebugDraw;
+		// This is not optimal physics timesteps should be always 15ms
+		private static var timeStep:Number = 1.0 / 20;
+		
+		//light objects
+		private var light:DirectionalLight;
+		public static var lightPicker:StaticLightPicker;
+		private var lightDirection:Vector3D;
+		
+		public function ArtMobile():void {
+			// Performance optimization
+			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
+			
+			stage.scaleMode = StageScaleMode.NO_SCALE;
+			stage.align = StageAlign.TOP_LEFT;
+			stage.quality = StageQuality.LOW;
+			
+			addEventListener(Event.ADDED_TO_STAGE, initStage);
+		}
+		
+		private function initGame():void {
+			// handles PlayerInput
+			currentController = new Controller();
+		}
+		
+		
+		private function trackingData(event:TrackEvent):void {
+			// First Tracker
+			var v3:Vector.<Vector3D> = event.m1.decompose();
+			
+			// Use setTo to reduce garbage
+			
+			cameraTracker.rotation.setTo(
+				v3[1].x/3.14*180,
+				v3[1].y/3.14*180,
+				v3[1].z/3.14*180);
+			cameraTracker.position.setTo(
+				v3[0].x,
+				v3[0].y,
+				v3[0].z);
+			view.camera.position.setTo(
+				v3[0].x,
+				v3[0].y,
+				v3[0].z);
+			view.camera.rotationX = cameraTracker.rotation.x;
+			view.camera.rotationY = cameraTracker.rotation.y;
+			view.camera.rotationZ = cameraTracker.rotation.z;
+					
+			//Second Tracker
+			v3 = event.m2.decompose();
+			
+			tracker1.rotation.setTo(
+				v3[1].x/3.14*180,
+				v3[1].y/3.14*180,
+				v3[1].z/3.14*180);
+			tracker1.position.setTo(
+				v3[0].x,
+				v3[0].y,
+				v3[0].z);
+			
+			// Third Tracker
+			v3 = event.m3.decompose();
+			tracker2.rotation.setTo(
+				v3[1].x/3.14*180,
+				v3[1].y/3.14*180,
+				v3[1].z/3.14*180);
+			tracker2.position.setTo(
+				v3[0].x,
+				v3[0].y,
+				v3[0].z);
+		}
+		
+		
+		
+		private function render(event:Event):void
+		{
+			arTracker.doTracking();
+			
+			light.direction = lightDirection;
+			
+			//doTransforms();
+			physicsWorld.step(timeStep);
+			view.render();
+		}
+		
+		private function onResize(event:Event = null):void{
+			var sw:Number = stage.stageWidth;
+			
+			var w:Number = stage.stageWidth * 0.7;
+			var h:Number = w * 0.75;
+			
+			h = stage.stageHeight;
+			w = h * 1.33;
+			
+			view.width = w;
+			view.height = h;
+			view.scaleX = 1;
+			view.scaleY = 1;
+			view.x = (sw / 2)-(w/2);
+			
+			trace("resized");
+		}
+		
+		
+		private function initStage(e:Event):void {
+			removeEventListener(Event.ADDED_TO_STAGE, initStage);
+			
+			// Init Scene
+			
+			// Init Tracker
+			arTracker = new ARTracker();
+			cameraTracker = new Tracker();
+			tracker1 = new Tracker();
+			tracker2 = new Tracker();
+			
+			// Init Viewport
+			view = new View3D();
+			// set Background to AR-VideoCamera
+			view.background= arTracker.videoBackground;
+			// set camera
+			initCamera();
+			
+			this.addChild(view);
+			
+			
+			initStatWindow();
+			initLight();
+			currentScene = view.scene;
+			currentCamera = view.camera;
+			initPhysics();
+			initEvents();
+			initGame();
+			
+		}
+		
+		
+		private function initCamera():void {
+			view.camera.lens = new PerspectiveLens(29.8);
+			view.camera.lens.near = 10;
+			view.camera.lens.far = 2000;
+			var eps:Number = 0.00000001;
+			view.camera.x = eps;
+			view.camera.y = eps;
+			view.camera.z = eps;
+			
+		}		
+		
+		private function initStatWindow():void {
+			var awayStats:AwayStats = new AwayStats(view)
+			awayStats.x = 150;
+			awayStats.y = 100;
+			this.addChild(awayStats);
+			
+		}
+		private function initLight():void {
+			//setup the light for the scene
+			light = new DirectionalLight();
+			lightPicker = new StaticLightPicker([light]);
+			lightDirection = new Vector3D(0, 0, -1);
+			view.scene.addChild(light);
+		}
+		private function initPhysics():void {
+			//////////////// init the physics world //////////////////// 
+			physicsWorld = AWPDynamicsWorld.getInstance();
+			physicsWorld.initWithDbvtBroadphase();
+			physicsWorld.collisionCallbackOn = true;
+			physicsWorld.gravity = new Vector3D(0,0,0);//-gravity);
+			
+			debugDraw = new AWPDebugDraw(view, physicsWorld); 
+			debugDraw.debugMode |= AWPDebugDraw.DBG_DrawRay;
+			//debugDraw.debugMode = AWPDebugDraw.DBG_NoDebug;
+		}
+		private function initEvents():void{
+			//////////////// setup events /////////////
+			
+			//////////////// stage rendering //////////////////// 
+			stage.addEventListener(Event.RESIZE, onResize);
+			stage.addEventListener(Event.ENTER_FRAME, render);
+			
+			//////////////// tracker //////////////////// 
+			arTracker.addEventListener(TrackEvent.ON_MARKER_FRAME, trackingData);
+			
+			//////////////// timer //////////////////// 
+			var playTimer:Timer=new Timer(1000,0);
+			playTimer.addEventListener(TimerEvent.TIMER, playTimerHandler);
+			playTimer.start();
+		}
+		
+		private function playTimerHandler(event:TimerEvent):void {
+			/*
+			playTime--;
+			if(playTime<=0)
+			{
+				resetRigids();
+				// sound
+				new NewLevel().play();
+				// reset time
+				playTime = 10;
+			}*/
+		}
+		
+		
+		
+		
+		
+	}
 	
-	
+	/*
 	public class ArtMobile extends Sprite
 	{
+		public static var currentScene:Scene3D;
+		public static var currentController:Controller;
 		// awesome comment
 		
 		private var playTime:int = 20;
 		// text
 		private var textFormat:TextFormat;
 		// physics
-		private var physicsWorld:AWPDynamicsWorld;
-		private var debugDraw:AWPDebugDraw;
+		public static var physicsWorld:AWPDynamicsWorld;
+		public static var debugDraw:AWPDebugDraw;
 		private static var timeStep:Number = 1.0 / 20;
 		private static var gravity:Number = 10;
 		private static var size:Number = 2;
@@ -102,12 +326,12 @@ package
 		//engine variables
 		private var scene:Scene3D;
 		private var camera:Camera3D;
-		private var view:View3D;
+		static public var view:View3D;
 		private var mylightP:PointLight;
 		private var lightP:PointLight;
 		//light objects
 		private var light:DirectionalLight;
-		private var lightPicker:StaticLightPicker;
+		public static var lightPicker:StaticLightPicker;
 		private var lightDirection:Vector3D;
 		
 		//material objects
@@ -139,7 +363,6 @@ package
 		public function ArtMobile():void
 		{
 			trace("hello world");
-			
 			NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
 			
 			//Font.registerFont(MyFont);
@@ -236,11 +459,14 @@ package
 			physicsWorld = AWPDynamicsWorld.getInstance();
 			physicsWorld.initWithDbvtBroadphase();
 			physicsWorld.collisionCallbackOn = true;
-			physicsWorld.gravity = new Vector3D(0,0,-gravity);
+			physicsWorld.gravity = new Vector3D(0,0,0);//-gravity);
 			
 			debugDraw = new AWPDebugDraw(view, physicsWorld); 
-			//debugDraw.debugMode |= AWPDebugDraw.DBG_DrawRay;
-			debugDraw.debugMode = AWPDebugDraw.DBG_NoDebug;
+			debugDraw.debugMode |= AWPDebugDraw.DBG_DrawRay;
+			//debugDraw.debugMode = AWPDebugDraw.DBG_NoDebug;
+			
+			
+			currentScene = view.scene;
 		}
 		
 		private function initPhysicsScene():void
@@ -279,20 +505,26 @@ package
 			var sprite3d:Sprite3D = new Sprite3D(txMat,32,32);
 			sprite3d.z = 50;
 			
+			
+			//var col:CollisionObject = new CollisionObject();
+			//col.setLight(lightPicker);
+			
 			// add text texture to groundplane
-			groundMesh = new Mesh(new CubeGeometry(60, 60, 2), txMat);
-			groundMesh.mouseEnabled = true;
-			view.scene.addChild(groundMesh);
-			var groundShape:AWPBoxShape = new AWPBoxShape(60, 60, 2);
-			groundRigidbody = new AWPRigidBody(groundShape, groundMesh, 0);
-			physicsWorld.addRigidBody(groundRigidbody);
+			
+			//groundMesh = new Mesh(new CubeGeometry(60, 60, 2), txMat);
+			//groundMesh.mouseEnabled = true;
+			//view.scene.addChild(groundMesh);
+			//var groundShape:AWPBoxShape = new AWPBoxShape(60, 60, 2);
+			//groundRigidbody = new AWPRigidBody(groundShape, groundMesh, 0);
+			//physicsWorld.addRigidBody(groundRigidbody);
+			
 			
 			// add bilboard to ground marker
-			groundMesh.addChild(sprite3d);
+			//groundMesh.addChild(sprite3d);
 			
 			// add arrows to ground marker
 			var arrows:Trident = new Trident(40, true);
-			groundMesh.addChild(arrows);
+			//groundMesh.addChild(arrows);
 			
 			materialR.alpha = 0.5;
 			materialR.alphaBlending = true;
@@ -302,6 +534,11 @@ package
 			var handShape:AWPBoxShape = new AWPBoxShape(60, 60, 2);
 			handRigidbody = new AWPRigidBody(handShape, handMesh, 0);
 			physicsWorld.addRigidBody(handRigidbody);
+			
+			
+			
+			currentController = new Controller(view.camera);
+			
 			
 			// add wireframegrid and arrows to hand marker
 			var arrowsHand:Trident = new Trident(40, true);
@@ -425,6 +662,7 @@ package
 		private function trackingData(event:TrackEvent):void {
 			//trace("m1 event: " + event.m1.position );
 			//trace("m2 event: " + event.m2.position );
+			
 			var v3:Vector.<Vector3D> = new Vector.<Vector3D>(3);
 			v3 = event.m1.decompose();
 			view.camera.position = new Vector3D(v3[0].x, v3[0].y, v3[0].z);
@@ -437,6 +675,7 @@ package
 			handRigidbody.rotationX = (v3[1].x/3.14*180);
 			handRigidbody.rotationY = (v3[1].y/3.14*180);
 			handRigidbody.rotationZ = (v3[1].z/3.14*180);
+			
 		}
-	}
+	}*/
 }

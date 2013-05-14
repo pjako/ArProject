@@ -27,7 +27,7 @@ package
 		private static var bgHeight:Number = 240;
 		private static var bgTextureResolution:Number = 128;
 		// marker ids
-		private static var marker1Id:Number = 11;
+		private static var marker1Id:Number = 0;
 		private static var marker2Id:Number = 6;
 		private static var marker3Id:Number = 1;
 	
@@ -88,23 +88,35 @@ package
 			var trackerEvent:TrackEvent = new TrackEvent(TrackEvent.ON_MARKER_FRAME);
 			
 			var v:Vector.<Number> = new Vector.<Number>();
+			//trace('currenttracker' + r[0]);
+			// First Marker we track
 			if(r[0]== marker1Id)
 			{
 				// get inverted matrix
-				v.push(r[17],r[18],r[19],r[20],r[21],r[22],r[23],r[24],r[25],r[26],r[27],r[28],r[29],r[30],r[31], r[32]);
+				v.push( r[17],r[18],r[19],r[20],
+						r[21],r[22],r[23],r[24],
+						r[25],r[26],r[27],r[28],
+						r[29],r[30],r[31],r[32]);
 				m1.rawData = v;
 			}else if(r[0]== marker2Id)
 			{
 				//get matrix
-				v.push(r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12],r[13],r[14],r[15], r[16]);
+				v.push(r[1], r[2], r[3],  r[4],
+					   r[5], r[6], r[7],  r[8],
+					   r[9], r[10],r[11], r[12],
+					   r[13],r[14],r[15], r[16]);
 				m2.rawData = v;
 			}
 				
 			var v2:Vector.<Number> = new Vector.<Number>();
+			// second marker we track
 			if(r[33]== marker1Id)
 			{
 				// get inverted matrix
-				v2.push(r[50],r[51],r[52],r[53],r[54],r[55],r[56],r[57],r[58],r[59],r[60],r[61],r[62],r[63],r[64],r[65]);
+				v2.push(r[50],r[51],r[52],r[53],
+						r[54],r[55],r[56],r[57],
+						r[58],r[59],r[60],r[61],
+						r[62],r[63],r[64],r[65]);
 				m1.rawData = v2;
 			}else if(r[33]== marker2Id)
 			{

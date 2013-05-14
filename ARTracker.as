@@ -27,7 +27,7 @@ package
 		private static var bgHeight:Number = 240;
 		private static var bgTextureResolution:Number = 128;
 		// marker ids
-		private static var marker1Id:Number = 0;
+		private static var marker1Id:Number = 11;
 		private static var marker2Id:Number = 6;
 		private static var marker3Id:Number = 1;
 	
@@ -88,7 +88,7 @@ package
 			var trackerEvent:TrackEvent = new TrackEvent(TrackEvent.ON_MARKER_FRAME);
 			
 			var v:Vector.<Number> = new Vector.<Number>();
-			//trace('currenttracker' + r[0]);
+			trace('currenttracker' + r[0]);
 			// First Marker we track
 			if(r[0]== marker1Id)
 			{

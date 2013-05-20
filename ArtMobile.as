@@ -34,6 +34,14 @@ package
 	import art.vfs.RootFSBackingStore;
 	
 	import away3d.arcane;
+	import away3d.animators.SkeletonAnimationSet;
+	import away3d.animators.SkeletonAnimator;
+	import away3d.animators.data.Skeleton;
+	import away3d.animators.nodes.SkeletonClipNode;
+	import away3d.animators.states.AnimationClipState;
+	import away3d.animators.states.ISkeletonAnimationState;
+	import away3d.animators.states.SkeletonClipState;
+	import away3d.animators.transitions.CrossfadeTransition;
 	import away3d.cameras.Camera3D;
 	import away3d.cameras.lenses.PerspectiveLens;
 	import away3d.containers.Scene3D;
@@ -45,8 +53,10 @@ package
 	import away3d.debug.WireframeAxesGrid;
 	import away3d.entities.Mesh;
 	import away3d.entities.Sprite3D;
-	import away3d.events.MouseEvent3D;
 	import away3d.events.AssetEvent;
+	import away3d.events.LoaderEvent;
+	import away3d.events.MouseEvent3D;
+	import away3d.library.AssetLibrary;
 	import away3d.library.assets.AssetType;
 	import away3d.lights.DirectionalLight;
 	import away3d.lights.PointLight;
@@ -67,6 +77,7 @@ package
 	import away3d.textures.BitmapTexture;
 	import away3d.textures.PlanarReflectionTexture;
 	import away3d.textures.WebcamTexture;
+	import away3d.utils.Cast;
 	
 	import awayphysics.collision.dispatch.AWPCollisionObject;
 	import awayphysics.collision.shapes.AWPBoxShape;
@@ -100,14 +111,43 @@ package
 		public static var lightPicker:StaticLightPicker;
 		private var lightDirection:Vector3D;
 		
-		//3d Assets loader + models *********
-		private var loader3D:Loader3D;
-		//private var modelURL:URLRequest;
-	
-		[Embed(source="../3d/tomb.awd", mimeType="application/octet-stream")]
+		//material objects
+		private var mMaterial:TextureMaterial;
+		
+		//3d Assets loader, vector array for meshobjects, models 
+		//animation variables
+		private var skeletonAnimator:SkeletonAnimator;
+		private var skeletonAnimationSet:SkeletonAnimationSet;
+		private var stateTransition:CrossfadeTransition = new CrossfadeTransition(0.5);
+		private var isRunning:Boolean;
+		private var isMoving:Boolean;
+		private var movementDirection:Number;
+		private var currentAnim:String;
+		private var currentRotationInc:Number = 0;
+		
+		//animation constants
+		private const ANIM_IDLE:String = "idle";
+		private const IDLE_SPEED:Number = 1;
+		private const ANIM_RUNNING:String = "running";
+		private const RUNNING_SPEED:Number = 1;
+		
+		//scene objects
+		private var mMesh:Mesh;
+		private var particleMesh:Mesh;
+		[Embed(source="../3d/skeleton.awd", mimeType="application/octet-stream")]
 		public static var Model:Class;
-		[Embed(source="/../3d/Tomb01_D.png")]
-		public static var mTexture:Class;
+		
+		//color map
+		[Embed(source="../3d/skeletonbody.png")]
+		private var Diffuse:Class;
+		
+		//normal map
+		//[Embed(source="/../embeds/normal.jpg")]
+		//private var Normal:Class;
+		
+		//specular map
+		//[Embed(source="/../3d/spec.jpg")]
+		//private var Specular:Class;
 		
 		public function ArtMobile():void {
 			// Performance optimization
@@ -243,21 +283,13 @@ package
 		
 		private function initAssets():void {
 			
-			// 3d import
+			// load Asset(s)
 			
-			var assetLoaderContext:AssetLoaderContext = new AssetLoaderContext();
-			assetLoaderContext.mapUrlToData("Tomb01_D.png", new mTexture());
+			AssetLibrary.enableParsers(Parsers.ALL_BUNDLED);
 			
-			Parsers.enableAllBundled();
-
-			loader3D = new Loader3D(true, null);
-			loader3D.position.x=0;
-			loader3D.position.y=0;
-			loader3D.position.z=0;
-			loader3D.addEventListener(AssetEvent.ASSET_COMPLETE, onAssetComplete);
-			loader3D.loadData(new Model(),assetLoaderContext);
-
-			currentScene.addChild(loader3D);
+			AssetLibrary.addEventListener(AssetEvent.ASSET_COMPLETE, onAssetComplete);
+			
+			AssetLibrary.loadData(new Model());
 
 			
 		}
@@ -331,18 +363,129 @@ package
 		private function onAssetComplete(event:AssetEvent):void {
 			//Event Handler for Assets
 			
-			if (event.asset.assetType == AssetType.MESH) {
-				var mesh:Mesh = event.asset as Mesh;
-				mesh.castsShadows = true;
-			} else if (event.asset.assetType == AssetType.MATERIAL) {
-				var material:TextureMaterial = event.asset as TextureMaterial;
-				material.shadowMethod = new FilteredShadowMapMethod(light);
-				material.lightPicker = lightPicker;
-				material.gloss = 30;
-				material.specular = 1;
-				material.ambientColor = 0x303040;
-				material.ambient = 1;
+			if (event.asset.assetType == AssetType.SKELETON) {
+				
+				trace("SKELETON");
+				//create a new skeleton animation set
+				skeletonAnimationSet = new SkeletonAnimationSet(3);
+				
+				//wrap our skeleton animation set in an animator object and add our sequence objects
+				skeletonAnimator = new SkeletonAnimator(skeletonAnimationSet, event.asset as Skeleton, false);
+				
+				//apply our animator to our mesh
+				mMesh.animator = skeletonAnimator;
+				
+				//key listeners for animationtest
+				//stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
+				//stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+				
+			} else if (event.asset.assetType == AssetType.ANIMATION_NODE) {
+				
+				trace("ANIMATIONNODE");
+				//create animation objects for each animation node encountered
+				var animationNode:SkeletonClipNode = event.asset as SkeletonClipNode;
+				
+				skeletonAnimationSet.addAnimation(animationNode);
+				if (animationNode.name == ANIM_RUNNING)
+					runningAnim();
+				
+			} else if (event.asset.assetType == AssetType.MESH) {
+				
+				
+				if (event.asset.name == "skeleton") {
+					
+					//create material object and assign it to our mesh
+					mMaterial = new TextureMaterial(Cast.bitmapTexture(Diffuse));
+					mMaterial.shadowMethod =  new FilteredShadowMapMethod(light);
+					//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+					//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+					mMaterial.lightPicker = lightPicker;
+					mMaterial.gloss = 50;
+					mMaterial.specular = 0.5;
+					mMaterial.ambientColor = 0xAAAAAA;
+					mMaterial.ambient = 0.5;
+					
+					//create mesh object and assign our animation object and material object
+					mMesh = event.asset as Mesh;
+					mMesh.material = mMaterial;
+					mMesh.castsShadows = true;
+					//mMesh.scale(1.5);
+					//mMesh.z = 1000;
+					mMesh.rotationY = 180;
+					mMesh.position = new Vector3D(0,0,0);
+					currentScene.addChild(mMesh);
+				}
+			} else {
+				//create particle system and add it to our scene
+				/**
+				 var geometry:Geometry = (event.asset as Mesh).geometry;
+				 var geometrySet:Vector.<Geometry> = new Vector.<Geometry>;
+				 var transforms:Vector.<ParticleGeometryTransform> = new Vector.<ParticleGeometryTransform>();
+				 var scale:Number;
+				 var vertexTransform:Matrix3D;
+				 var particleTransform:ParticleGeometryTransform;
+				 for (var i:int = 0; i < 3000; i++)
+				 {
+				 geometrySet.push(geometry);
+				 particleTransform = new ParticleGeometryTransform();
+				 scale = Math.random()  + 1;
+				 vertexTransform = new Matrix3D();
+				 vertexTransform.appendScale(scale, scale, scale);
+				 particleTransform.vertexTransform = vertexTransform;
+				 transforms.push(particleTransform);
+				 }
+				 
+				 var particleGeometry:Geometry = ParticleGeometryHelper.generateGeometry(geometrySet,transforms);
+				 
+				 
+				 var particleAnimationSet:ParticleAnimationSet = new ParticleAnimationSet(true, true);
+				 particleAnimationSet.addAnimation(new ParticleVelocityNode(ParticlePropertiesMode.GLOBAL, new Vector3D(0, -100, 0)));
+				 particleAnimationSet.addAnimation(new ParticlePositionNode(ParticlePropertiesMode.LOCAL_STATIC));
+				 particleAnimationSet.addAnimation(new ParticleOscillatorNode(ParticlePropertiesMode.LOCAL_STATIC));
+				 particleAnimationSet.addAnimation(new ParticleRotationalVelocityNode(ParticlePropertiesMode.LOCAL_STATIC));
+				 particleAnimationSet.initParticleFunc = initParticleFunc;
+				 
+				 var material:ColorMaterial = new ColorMaterial();
+				 material.lightPicker = lightPicker;
+				 particleMesh = new Mesh(particleGeometry, material);
+				 particleMesh.bounds.fromSphere(new Vector3D(), 2000);
+				 var particleAnimator:ParticleAnimator = new ParticleAnimator(particleAnimationSet);
+				 particleMesh.animator = particleAnimator;
+				 particleAnimator.start();
+				 particleAnimator.resetTime(-10000);
+				 currentScene.addChild(particleMesh); **/
 			}
+			
+		}
+		
+		private function idleAnim():void {
+			
+			//update animator speed
+			skeletonAnimator.playbackSpeed = IDLE_SPEED;
+			
+			//update animator sequence
+			if (currentAnim == ANIM_IDLE)
+				return;
+			
+			currentAnim = ANIM_IDLE;
+			
+			skeletonAnimator.play(currentAnim, stateTransition);
+			
+			
+		}
+		
+		private function runningAnim():void {
+			
+			//update animator speed
+			skeletonAnimator.playbackSpeed = RUNNING_SPEED;
+			
+			//update animator sequence
+			if (currentAnim == ANIM_RUNNING)
+				return;
+			
+			currentAnim = ANIM_RUNNING;
+			
+			skeletonAnimator.play(currentAnim, stateTransition);
 			
 		}
 		

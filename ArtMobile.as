@@ -3,7 +3,9 @@ package
 {
 	import flash.desktop.NativeApplication;
 	import flash.desktop.SystemIdleMode;
+	import flash.display.Bitmap;
 	import flash.display.BitmapData;
+	import flash.display.Loader;
 	import flash.display.Sprite;
 	import flash.display.StageAlign;
 	import flash.display.StageQuality;
@@ -16,16 +18,17 @@ package
 	import flash.media.Camera;
 	import flash.media.Sound;
 	import flash.media.Video;
+	import flash.net.URLRequest;
 	import flash.system.Security;
 	import flash.system.SecurityPanel;
 	import flash.text.AntiAliasType;
 	import flash.text.TextField;
 	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
 	import flash.ui.Multitouch;
 	import flash.ui.MultitouchInputMode;
 	import flash.utils.Timer;
 	import flash.utils.flash_proxy;
-	import flash.net.URLRequest;
 	
 	import art.CModule;
 	import art.FlashEcho;
@@ -62,7 +65,7 @@ package
 	import away3d.lights.PointLight;
 	import away3d.loaders.Loader3D;
 	import away3d.loaders.misc.AssetLoaderContext;
-	import away3d.loaders.parsers.*;
+	import away3d.loaders.parsers.Parsers;
 	import away3d.materials.ColorMaterial;
 	import away3d.materials.MaterialBase;
 	import away3d.materials.TextureMaterial;
@@ -128,12 +131,13 @@ package
 		//animation constants
 		private const ANIM_IDLE:String = "idle";
 		private const IDLE_SPEED:Number = 1;
-		private const ANIM_RUNNING:String = "running";
+		private const ANIM_RUNNING:String = "run";
 		private const RUNNING_SPEED:Number = 1;
 		
 		//scene objects
 		private var mMesh:Mesh;
 		private var particleMesh:Mesh;
+		
 		[Embed(source="../3d/skeleton.awd", mimeType="application/octet-stream")]
 		public static var Model:Class;
 		
@@ -148,6 +152,21 @@ package
 		//specular map
 		//[Embed(source="/../3d/spec.jpg")]
 		//private var Specular:Class;
+		
+		//HUD Variables
+		
+		private var image2Load:Bitmap;
+		private var loader:Loader;
+		private var textFormat1:TextFormat;
+		private var textField1:TextField;
+
+		[Embed(source="arial.ttf", fontFamily="Arial",fontWeight="bold", fontStyle="normal", advancedAntiAliasing="true",  embedAsCFF="false")]
+		private var MyFont:Class;
+		
+		//SCORES
+		
+		private var zombieScore:Number;
+		private var playerScore:Number;
 		
 		public function ArtMobile():void {
 			// Performance optimization
@@ -269,7 +288,7 @@ package
 			this.addChild(view);
 			
 			
-			initStatWindow();
+			//initStatWindow();
 			initLight();
 			currentScene = view.scene;
 			currentCamera = view.camera;
@@ -277,6 +296,7 @@ package
 			initPhysics();
 			initEvents();
 			initGame();
+			updateHUD(0,0);
 			
 			
 		}
@@ -292,6 +312,58 @@ package
 			AssetLibrary.loadData(new Model());
 
 			
+		}
+		
+		private function updateHUD(playerScoreUpdate:Number,zombieScoreUpdate:Number):void {
+			
+			//Updates the Score in HUD
+			
+			playerScore=playerScoreUpdate;
+			zombieScore=zombieScoreUpdate;
+			
+			
+			//Load BG Image for HUD
+			loader = new Loader();
+			loader.contentLoaderInfo.addEventListener(Event.COMPLETE, completeHandler);
+			var request:URLRequest = new URLRequest("HUD.png");
+			loader.load(request);
+			loader.x=100;
+			loader.y=0;
+			this.addChild(loader);
+			
+			//Add Text to HUD
+			
+			textFormat1 = new TextFormat();
+
+			textFormat1.color = 0xFFFFFF;
+			textFormat1.align = TextFormatAlign.CENTER;
+			textFormat1.font = "MyFont";
+			textFormat1.size = 20;
+			
+			textField1 = new TextField();
+			//textField1.embedFonts = true; //DOES NOT WORK?!?!
+			textField1.antiAliasType = AntiAliasType.ADVANCED;
+			textField1.text =  "Geister: "+zombieScore +"\r Spieler: "+playerScore;
+			textField1.defaultTextFormat = textFormat1;
+			textField1.setTextFormat(textFormat1);
+			textField1.x=120;
+			textField1.y=25;
+			textField1.background = false;
+			textField1.selectable = false;
+			textField1.multiline = true;
+
+			var vctr:Sprite = new Sprite();
+			vctr.x = 0;
+			vctr.y = 0;
+			
+			vctr.addChild(textField1);
+			this.addChild(vctr);
+			
+		}
+		
+		private function completeHandler(event:Event):void {
+			
+			//Event handler for HUD Image
 		}
 		
 		
@@ -411,6 +483,7 @@ package
 					mMesh.castsShadows = true;
 					//mMesh.scale(1.5);
 					//mMesh.z = 1000;
+					//mMesh.scale(0.01);
 					mMesh.rotationY = 180;
 					mMesh.position = new Vector3D(0,0,0);
 					currentScene.addChild(mMesh);

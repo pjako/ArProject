@@ -16,6 +16,7 @@ package
 	import flash.media.Camera;
 	import flash.media.Sound;
 	import flash.media.Video;
+	import flash.net.URLRequest;
 	import flash.system.Security;
 	import flash.system.SecurityPanel;
 	import flash.text.AntiAliasType;
@@ -25,7 +26,6 @@ package
 	import flash.ui.MultitouchInputMode;
 	import flash.utils.Timer;
 	import flash.utils.flash_proxy;
-	import flash.net.URLRequest;
 	
 	import art.CModule;
 	import art.FlashEcho;
@@ -62,7 +62,7 @@ package
 	import away3d.lights.PointLight;
 	import away3d.loaders.Loader3D;
 	import away3d.loaders.misc.AssetLoaderContext;
-	import away3d.loaders.parsers.*;
+	import away3d.loaders.parsers.Parsers;
 	import away3d.materials.ColorMaterial;
 	import away3d.materials.MaterialBase;
 	import away3d.materials.TextureMaterial;
@@ -126,20 +126,47 @@ package
 		private var currentRotationInc:Number = 0;
 		
 		//animation constants
-		private const ANIM_IDLE:String = "idle";
+		private const ANIM_IDLE:String = "Breathe";
 		private const IDLE_SPEED:Number = 1;
-		private const ANIM_RUNNING:String = "running";
+		private const ANIM_RUNNING:String = "Run";
 		private const RUNNING_SPEED:Number = 1;
 		
 		//scene objects
 		private var mMesh:Mesh;
 		private var particleMesh:Mesh;
-		[Embed(source="../3d/skeleton.awd", mimeType="application/octet-stream")]
+		[Embed(source="../3d/PolarBear.AWD", mimeType="application/octet-stream")]
 		public static var Model:Class;
 		
+		private var tomb:Mesh;
+		//private var particleMesh:Mesh;
+		[Embed(source="../3d/tomb.AWD", mimeType="application/octet-stream")]
+		public static var Tomb:Class;
+		[Embed(source="../3d/Tomb01_D.png")]
+		private var TombTexture:Class;
+		
+		public static var ghost:Mesh;
+		[Embed(source="../3d/ghost.AWD", mimeType="application/octet-stream")]
+		public static var Ghost:Class;
+		[Embed(source="../3d/ghostColor.png")]
+		private var GhostTexture:Class;
+		
+		private var midTower:Mesh;
+		[Embed(source="../3d/midTower.AWD", mimeType="application/octet-stream")]
+		public static var MidTower:Class;
+		[Embed(source="../3d/Statue01_D.png")]
+		private var MidTowerTexture:Class;
+		
 		//color map
-		[Embed(source="../3d/skeletonbody.png")]
+		[Embed(source="../3d/polarbear_diffuse.jpg")]
 		private var Diffuse:Class;
+		
+		
+		private var loadAssets:int = 3;
+		private var loadedAssets:int = 0;
+		
+		
+		// Game Variables
+		static public var enemies:Array = new Array();
 		
 		//normal map
 		//[Embed(source="/../embeds/normal.jpg")]
@@ -163,6 +190,25 @@ package
 		private function initGame():void {
 			// handles PlayerInput
 			currentController = new Controller();
+		}
+		
+		private function allAssetsLoaded():void {
+			trace("all assets loaded");
+			var spawner:Spawner = new Spawner(tomb, 1000);
+			spawner.setPos( new Vector3D(100,100,0));
+			
+			var playTimer:Timer=new Timer(60);
+			playTimer.addEventListener(TimerEvent.TIMER, update);
+			playTimer.start();
+		}
+		
+		private function update(event:TimerEvent):void {
+			enemies.forEach( function (value) {
+				var enemy:Enemy = value as Enemy;
+				if(enemy == null) return;
+				enemy.update(60);
+				trace("update enemy");
+			});
 		}
 		
 		
@@ -289,7 +335,34 @@ package
 			
 			AssetLibrary.addEventListener(AssetEvent.ASSET_COMPLETE, onAssetComplete);
 			
-			AssetLibrary.loadData(new Model());
+			//AssetLibrary.loadData(new Model());
+			AssetLibrary.loadData(new Tomb());
+			AssetLibrary.loadData(new Ghost());
+			AssetLibrary.loadData(new MidTower());
+			/*.addEventListener(LoaderEvent.RESOURCE_COMPLETE, function (e:LoaderEvent){
+				if(e.asset.assetType == AssetType.MESH) {
+				 	tomb = e.asset  as Mesh;
+					
+					var tombMaterial:TextureMaterial = new TextureMaterial(Cast.bitmapTexture(Diffuse));
+					tombMaterial.shadowMethod =  new FilteredShadowMapMethod(light);
+					//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+					//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+					tombMaterial.lightPicker = lightPicker;
+					tombMaterial.gloss = 50;
+					tombMaterial.specular = 0.5;
+					tombMaterial.ambientColor = 0xAAAAAA;
+					tombMaterial.ambient = 0.5;
+					
+					tomb.material = tombMaterial;
+					tomb.castsShadows = true;
+					
+					//mMesh.scale(1.5);
+					//mMesh.z = 1000;
+					//mMesh.rotationY = 180;
+					tomb.position = new Vector3D(0,0,0);
+					currentScene.addChild(tomb);
+				}
+			});*/
 
 			
 		}
@@ -362,6 +435,7 @@ package
 		
 		private function onAssetComplete(event:AssetEvent):void {
 			//Event Handler for Assets
+			trace("SKELETON " + event.asset.name + " Type: " + event.asset.assetType);
 			
 			if (event.asset.assetType == AssetType.SKELETON) {
 				
@@ -381,6 +455,7 @@ package
 				
 			} else if (event.asset.assetType == AssetType.ANIMATION_NODE) {
 				
+				
 				trace("ANIMATIONNODE");
 				//create animation objects for each animation node encountered
 				var animationNode:SkeletonClipNode = event.asset as SkeletonClipNode;
@@ -390,9 +465,98 @@ package
 					runningAnim();
 				
 			} else if (event.asset.assetType == AssetType.MESH) {
+				switch(event.asset.name) {
+					case("Tomb05_c"):
+						tomb = event.asset as Mesh;
+						var tombMat:TextureMaterial = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						//create material object and assign it to our mesh
+						//tombMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						tombMat.shadowMethod =  new FilteredShadowMapMethod(light);
+						//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+						//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+						tombMat.lightPicker = lightPicker;
+						tombMat.gloss = 50;
+						tombMat.specular = 0.5;
+						tombMat.ambientColor = 0xAAAAAA;
+						tombMat.ambient = 0.5;
+						
+						//create mesh object and assign our animation object and material object
+						tomb = event.asset as Mesh;
+						tomb.material = tombMat;
+						tomb.castsShadows = true;
+						tomb.scale(0.333);
+						//mMesh.z = 1000;
+						tomb.rotationX = 90;
+						tomb.rotationZ = 0;
+						tomb.position = new Vector3D(0,0,0);
+						//currentScene.addChild(tomb);
+						trace("tomb added");
+						loadedAssets++;
+					break;
+					case("Statue02_a"):
+						midTower = event.asset as Mesh;
+						var midTowerMat:TextureMaterial = new TextureMaterial(Cast.bitmapTexture(MidTowerTexture));
+						//create material object and assign it to our mesh
+						//tombMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						midTowerMat.shadowMethod =  new FilteredShadowMapMethod(light);
+						//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+						//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+						midTowerMat.lightPicker = lightPicker;
+						midTowerMat.gloss = 50;
+						midTowerMat.specular = 0.5;
+						midTowerMat.ambientColor = 0xAAAAAA;
+						midTowerMat.ambient = 0.5;
+						
+						//create mesh object and assign our animation object and material object
+						//tomb = event.asset as Mesh;
+						midTower.material = midTowerMat;
+						midTower.castsShadows = true;
+						midTower.scale(0.5);
+						//mMesh.z = 1000;
+						midTower.rotationX = 90;
+						midTower.rotationZ = 0;
+						midTower.position = new Vector3D(0,0,0);
+						currentScene.addChild(midTower);
+						//currentScene.addChild(tomb);
+						trace("tomb added");
+						loadedAssets++;
+					break;
+					case("polySurface1"):
+						ghost = event.asset as Mesh;
+						var ghostMat:TextureMaterial = new TextureMaterial(Cast.bitmapTexture(GhostTexture));
+						//create material object and assign it to our mesh
+						//tombMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						ghostMat.shadowMethod =  new FilteredShadowMapMethod(light);
+						//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+						//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+						ghostMat.lightPicker = lightPicker;
+						ghostMat.gloss = 50;
+						ghostMat.specular = 0.5;
+						ghostMat.ambientColor = 0xAAAAAA;
+						ghostMat.ambient = 0.5;
+						
+						//create mesh object and assign our animation object and material object
+						//tomb = event.asset as Mesh;
+						ghost.material = ghostMat;
+						ghost.castsShadows = true;
+						ghost.scale(2.0);
+						//mMesh.z = 1000;
+						ghost.rotationX = 90;
+						ghost.rotationZ = 0;
+						ghost.position = new Vector3D(0,0,0);
+						currentScene.addChild(ghost);
+						//currentScene.addChild(tomb);
+						trace("tomb added");
+						loadedAssets++;
+						break;
+						
+				}
+				if(loadedAssets == loadAssets) allAssetsLoaded();
 				
 				
-				if (event.asset.name == "skeleton") {
+				return;
+				
+				if (event.asset.name == "PolarBear") {
 					
 					//create material object and assign it to our mesh
 					mMaterial = new TextureMaterial(Cast.bitmapTexture(Diffuse));

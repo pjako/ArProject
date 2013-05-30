@@ -1,0 +1,9 @@
+# Sequences for characters
+# This file was written by John Doe (john@example.com)
+idle 0 240
+running 241 263
+waitingforbattle 264 314
+attack 315 350
+gethit 351 386
+die 387 457
+club_dancing 458 1275

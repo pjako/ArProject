@@ -137,11 +137,12 @@ package
 		//scene objects
 		private var mMesh:Mesh;
 		private var particleMesh:Mesh;
-		[Embed(source="myModel.awd", mimeType="application/octet-stream")]
+		
+		[Embed(source="../3d/skeleton.awd", mimeType="application/octet-stream")]
 		public static var Model:Class;
 		
 		//color map
-		[Embed(source="lambert2.png")]
+		[Embed(source="../3d/skeletonbody.png")]
 		private var Diffuse:Class;
 		
 		//normal map
@@ -482,7 +483,7 @@ package
 					mMesh.castsShadows = true;
 					//mMesh.scale(1.5);
 					//mMesh.z = 1000;
-					//mMesh.scale(10);
+					//mMesh.scale(0.01);
 					mMesh.rotationY = 180;
 					mMesh.position = new Vector3D(0,0,0);
 					currentScene.addChild(mMesh);

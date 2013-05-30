@@ -21,14 +21,14 @@ package {
 		private var image:Bitmap;
 		private var done:Function;
 		
-		[Embed(source="C:/WINDOWS/Fonts/RAVIE.TTF", fontFamily="MyFont",fontWeight="normal", fontStyle="normal", advancedAntiAliasing="true",  embedAsCFF="false")]
+		[Embed(source="arial.ttf", fontFamily="Arial",fontWeight="bold", fontStyle="normal", advancedAntiAliasing="true",  embedAsCFF="false")]
 		private var MyFont:Class;
 		
 		public function SpriteBtn(_url:String, _text:String, _textSize:int) {
 			Font.registerFont(MyFont);
 			url = _url;
 			textFormat = new TextFormat();
-			textFormat.color = 0x000000;
+			textFormat.color = 0xFFFFFF;
 			textFormat.align = TextFormatAlign.CENTER;
 			textFormat.font = "MyFont"
 			textFormat.size = _textSize;
@@ -57,6 +57,7 @@ package {
 			image = Bitmap(loader.content);
 			//addChild(image);
 			this.addChild(textField);
+			trace("Loaded: "+event.toString());
 			
 		}
 		

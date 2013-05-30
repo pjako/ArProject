@@ -88,7 +88,7 @@ package
 			var trackerEvent:TrackEvent = new TrackEvent(TrackEvent.ON_MARKER_FRAME);
 			
 			var v:Vector.<Number> = new Vector.<Number>();
-			trace('currenttracker' + r[0]);
+			//trace('currenttracker' + r[0]);
 			// First Marker we track
 			if(r[0]== marker1Id)
 			{

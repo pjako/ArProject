@@ -1,6 +1,13 @@
 //test
 package
 {
+	import flash.display.Bitmap;
+	import flash.display.Loader;
+	import flash.net.URLRequest;
+	import flash.text.TextFormatAlign;
+	import flash.utils.flash_proxy;
+	
+	
 	import flash.desktop.NativeApplication;
 	import flash.desktop.SystemIdleMode;
 	import flash.display.BitmapData;
@@ -168,6 +175,22 @@ package
 		// Game Variables
 		static public var enemies:Array = new Array();
 		
+		
+		//HUD Variables
+		
+		private var image2Load:Bitmap;
+		private var loader:Loader;
+		private var textFormat1:TextFormat;
+		private var textField1:TextField;
+		
+		[Embed(source="arial.ttf", fontFamily="Arial",fontWeight="bold", fontStyle="normal", advancedAntiAliasing="true",  embedAsCFF="false")]
+		private var MyFont:Class;
+		
+		//SCORES
+		
+		private var zombieScore:Number;
+		private var playerScore:Number;
+		
 		//normal map
 		//[Embed(source="/../embeds/normal.jpg")]
 		//private var Normal:Class;
@@ -200,6 +223,7 @@ package
 			var playTimer:Timer=new Timer(60);
 			playTimer.addEventListener(TimerEvent.TIMER, update);
 			playTimer.start();
+			updateHUD(0,0);
 		}
 		
 		private function update(event:TimerEvent):void {
@@ -209,6 +233,57 @@ package
 				enemy.update(60);
 				trace("update enemy");
 			});
+		}
+		
+		private function updateHUD(playerScoreUpdate:Number,zombieScoreUpdate:Number):void {
+			
+			//Updates the Score in HUD
+			
+			playerScore=playerScoreUpdate;
+			zombieScore=zombieScoreUpdate;
+			
+			
+			//Load BG Image for HUD
+			loader = new Loader();
+			loader.contentLoaderInfo.addEventListener(Event.COMPLETE, completeHandler);
+			var request:URLRequest = new URLRequest("HUD.png");
+			loader.load(request);
+			loader.x=100;
+			loader.y=0;
+			this.addChild(loader);
+			
+			//Add Text to HUD
+			
+			textFormat1 = new TextFormat();
+			
+			textFormat1.color = 0xFFFFFF;
+			textFormat1.align = TextFormatAlign.CENTER;
+			textFormat1.font = "MyFont";
+			textFormat1.size = 20;
+			
+			textField1 = new TextField();
+			//textField1.embedFonts = true; //DOES NOT WORK?!?!
+			textField1.antiAliasType = AntiAliasType.ADVANCED;
+			textField1.text =  "Geister: "+zombieScore +"\r Spieler: "+playerScore;
+			textField1.defaultTextFormat = textFormat1;
+			textField1.setTextFormat(textFormat1);
+			textField1.x=120;
+			textField1.y=25;
+			textField1.background = false;
+			textField1.selectable = false;
+			textField1.multiline = true;
+			
+			var vctr:Sprite = new Sprite();
+			vctr.x = 0;
+			vctr.y = 0;
+			
+			vctr.addChild(textField1);
+			this.addChild(vctr);
+			
+		}
+		private function completeHandler(event:Event):void {
+			
+			//Event handler for HUD Image
 		}
 		
 		

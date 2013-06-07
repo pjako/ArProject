@@ -65,6 +65,17 @@ package
 			
 			physicsWorld.addRigidBody(collision);
 			collision.applyCentralImpulse(dir);
+			active = true;
+		}
+		private var active:Boolean = false;
+		public function update():void {
+			if(active == false) return;
+			trace(collision.position.length);
+			if(collision.position.length > 3000) {
+				stop();
+				ArtMobile.usableBullets.push(this);
+				active = false;
+			}
 		}
 		
 		public function onCollision(e:AWPEvent):void {

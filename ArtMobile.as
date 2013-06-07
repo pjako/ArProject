@@ -194,6 +194,7 @@ package
 		// Game Variables
 		static public var enemies:Array = new Array();
 		public static var bullets:Array = new Array();
+		private static var bulletsUpdate:Array = new Array();
 		public static var usableBullets:Array = new Array();
 		
 		
@@ -244,9 +245,9 @@ package
 			var spawner:Spawner = new Spawner(tomb, 10000);
 			spawner.setPos( new Vector3D(100,100,0));
 			alocateBullets();
-			var ground:AWPBoxShape = new AWPBoxShape(1000, 0.01, 1000);
-			var gr:AWPCollisionObject = new AWPCollisionObject(ground, null);
-			physicsWorld.addCollisionObject(gr);
+			//var ground:AWPBoxShape = new AWPBoxShape(1000, 0.01, 1000);
+			//var gr:AWPCollisionObject = new AWPCollisionObject(ground, null);
+			//physicsWorld.addCollisionObject(gr);
 			//;
 			
 			var playTimer:Timer=new Timer(60);
@@ -273,10 +274,12 @@ package
 				var bullet:Bullet = new Bullet(mesh);
 				bullets.push(bullet.collision);
 				usableBullets.push(bullet);
+				bulletsUpdate.push(bullet);
 				
 			}
 		}
 		
+		private var timeCount:Number = 18;
 		private function update(event:TimerEvent):void {
 			enemies.forEach( function (value) {
 				var enemy:Enemy = value as Enemy;
@@ -284,6 +287,14 @@ package
 				enemy.update(60);
 				//trace("update enemy");
 			});
+			bulletsUpdate.forEach( function (value) {
+				value.update();
+			});
+			timeCount += 0.1;
+			if(timeCount >= 5.0) {
+				new Enemy(ghost, new Vector3D(40+(Math.random())*50,40+(Math.random())*50,40+(Math.random())*50), 15);
+				timeCount = 0;
+			}
 		}
 		
 		
@@ -452,7 +463,7 @@ package
 			this.addChild(view);
 			
 			
-			initStatWindow();
+			//initStatWindow();
 			initLight();
 			currentScene = view.scene;
 			currentCamera = view.camera;

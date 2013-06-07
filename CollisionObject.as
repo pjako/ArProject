@@ -12,6 +12,7 @@ package
 	import awayphysics.collision.shapes.AWPBoxShape;
 	import awayphysics.dynamics.AWPDynamicsWorld;
 	import awayphysics.dynamics.AWPRigidBody;
+	import awayphysics.events.AWPEvent;
 
 	public class CollisionObject extends Sprite implements IRenderAble
 	{
@@ -28,22 +29,30 @@ package
 			material = new ColorMaterial(0x00CC00);
 			// Set Mesh
 			mesh = new Mesh(new CubeGeometry(10.0, 10.0, 10.0), material);
-			var handShape:AWPBoxShape = new AWPBoxShape(20, 20, 10);
-			collision = new AWPRigidBody(handShape, mesh, 0);
+			var handShape:AWPBoxShape = new AWPBoxShape(4, 4, 4);
+			
+			collision = new AWPRigidBody(handShape, mesh, 4.1);
+			
 			physicsWorld.addRigidBody(collision);
 			mesh.mouseEnabled = true;
-			mesh.addEventListener( MouseEvent3D.MOUSE_OVER, onObjectMouseOver );
+			collision.addEventListener(AWPEvent.COLLISION_ADDED, onCollision);
+			//mesh.addEventListener( MouseEvent3D.MOUSE_OVER, onObjectMouseOver );
 
 
 			//material.lightPicker = lightPicker;
 			scene.addChild(mesh);
 		}
+		public function onCollision(e:AWPEvent):void {
+			if(ArtMobile.bullets.indexOf(e.collisionObject) != -1) {
+			}
+			trace('Collide');
+		}
 		public function setLight(lightPicker:StaticLightPicker):void {
 			material.lightPicker = lightPicker;
-			trace('set light!');
+			//trace('set light!');
 		}
 		private function onObjectMouseOver( event:MouseEvent3D ):void {
-			trace('hit! :o');
+			//trace('hit! :o');
 		}
 	}
 }

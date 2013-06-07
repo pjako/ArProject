@@ -5,11 +5,10 @@ package
 	
 	import away3d.cameras.Camera3D;
 	import away3d.entities.Mesh;
+	import away3d.entities.SegmentSet;
 	import away3d.events.MouseEvent3D;
 	import away3d.primitives.CubeGeometry;
 	import away3d.primitives.LineSegment;
-	import away3d.entities.SegmentSet;
-
 	
 	import awayphysics.math.AWPTransform;
 	
@@ -21,6 +20,8 @@ package
 	public class Controller
 	{
 		private var camera:Camera3D;
+		private var usedBullets:Array;
+		private var bullets:Array;
 		
 		public function Controller() {
 			camera = ArtMobile.currentCamera;
@@ -30,10 +31,21 @@ package
 		}
 		
 		private function onMouseDown( event:MouseEvent ):void {
-			trace('pew pew!' + ArtMobile.view.mouseX + " " + ArtMobile.view.mouseY);
+			//trace('pew pew!' + ArtMobile.view.mouseX + " " + ArtMobile.view.mouseY);
 			var relX:Number = ((ArtMobile.view.mouseX / ArtMobile.view.width) - 0.5) * 2;
 			var relY:Number = ((ArtMobile.view.mouseY / ArtMobile.view.height) - 0.5) * 2;
-			
+			var origin:Vector3D = camera.unproject(relX,relY,0.0); //camera.unproject(0.0,0.0,0.0);
+			var direction:Vector3D = camera.unproject(relX,relY,1.0); 
+			var dir:Vector3D = direction.clone();
+			direction.subtract(origin);
+			direction.normalize();
+			var impulse:Vector3D = direction;//camera.forwardVector.clone();
+			impulse.scaleBy(1.0);
+
+			var bullet:Bullet = ArtMobile.usableBullets.pop() as Bullet;
+			bullet.reset( origin, impulse);
+			return;
+			/*
 			//var b2:CollisionObject = new CollisionObject();
 			//b2.mesh.position = camera.unproject(relX,relY,1.0)
 			
@@ -79,6 +91,7 @@ package
 			impulse.scaleBy(3.0);
 			impulse.negate();
 			bullet.collision.applyCentralForce(impulse);
+			*/
 /*
 			camera.forwardVector
 			trace( event.sceneNormal + "  " + event.scenePosition );

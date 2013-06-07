@@ -1,16 +1,11 @@
 //test
 package
 {
-	import flash.display.Bitmap;
-	import flash.display.Loader;
-	import flash.net.URLRequest;
-	import flash.text.TextFormatAlign;
-	import flash.utils.flash_proxy;
-	
-	
 	import flash.desktop.NativeApplication;
 	import flash.desktop.SystemIdleMode;
+	import flash.display.Bitmap;
 	import flash.display.BitmapData;
+	import flash.display.Loader;
 	import flash.display.Sprite;
 	import flash.display.StageAlign;
 	import flash.display.StageQuality;
@@ -29,6 +24,8 @@ package
 	import flash.text.AntiAliasType;
 	import flash.text.TextField;
 	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
+	import flash.text.engine.BreakOpportunity;
 	import flash.ui.Multitouch;
 	import flash.ui.MultitouchInputMode;
 	import flash.utils.Timer;
@@ -91,6 +88,7 @@ package
 	import awayphysics.collision.shapes.AWPConeShape;
 	import awayphysics.collision.shapes.AWPCylinderShape;
 	import awayphysics.collision.shapes.AWPSphereShape;
+	import awayphysics.collision.shapes.AWPStaticPlaneShape;
 	import awayphysics.debug.AWPDebugDraw;
 	import awayphysics.dynamics.AWPDynamicsWorld;
 	import awayphysics.dynamics.AWPRigidBody;
@@ -110,6 +108,7 @@ package
 		public static var tracker1:Tracker;
 		public static var tracker2:Tracker;
 		public static var debugDraw:AWPDebugDraw;
+		public static var artMobile:ArtMobile;
 		// This is not optimal physics timesteps should be always 15ms
 		private static var timeStep:Number = 1.0 / 20;
 		
@@ -163,17 +162,39 @@ package
 		[Embed(source="../3d/Statue01_D.png")]
 		private var MidTowerTexture:Class;
 		
+		private var bullet0:Mesh;
+		[Embed(source="../3d/sword.AWD", mimeType="application/octet-stream")]
+		public static var Bullet0Mesh:Class;
+		[Embed(source="../3d/sword1H01.png")]
+		private var Bullet0Texture:Class;
+		
+		private var bullet1:Mesh;
+		[Embed(source="../3d/hammer.AWD", mimeType="application/octet-stream")]
+		public static var Bullet1Mesh:Class;
+		[Embed(source="../3d/hammer01.png")]
+		private var Bullet1Texture:Class;
+		
+		private var bullet2:Mesh;
+		[Embed(source="../3d/morningstar.AWD", mimeType="application/octet-stream")]
+		public static var Bullet2Mesh:Class;
+		[Embed(source="../3d/morningstar01.png")]
+		private var Bullet2Texture:Class;
+		
+		
+		
 		//color map
 		[Embed(source="../3d/polarbear_diffuse.jpg")]
 		private var Diffuse:Class;
 		
 		
-		private var loadAssets:int = 3;
+		private var loadAssets:int = 6;
 		private var loadedAssets:int = 0;
 		
 		
 		// Game Variables
 		static public var enemies:Array = new Array();
+		public static var bullets:Array = new Array();
+		public static var usableBullets:Array = new Array();
 		
 		
 		//HUD Variables
@@ -190,6 +211,8 @@ package
 		
 		private var zombieScore:Number;
 		private var playerScore:Number;
+		
+		
 		
 		//normal map
 		//[Embed(source="/../embeds/normal.jpg")]
@@ -208,6 +231,7 @@ package
 			stage.quality = StageQuality.LOW;
 			
 			addEventListener(Event.ADDED_TO_STAGE, initStage);
+			artMobile = this;
 		}
 		
 		private function initGame():void {
@@ -216,14 +240,41 @@ package
 		}
 		
 		private function allAssetsLoaded():void {
-			trace("all assets loaded");
-			var spawner:Spawner = new Spawner(tomb, 1000);
+			//trace("all assets loaded");
+			var spawner:Spawner = new Spawner(tomb, 10000);
 			spawner.setPos( new Vector3D(100,100,0));
+			alocateBullets();
+			var ground:AWPBoxShape = new AWPBoxShape(1000, 0.01, 1000);
+			var gr:AWPCollisionObject = new AWPCollisionObject(ground, null);
+			physicsWorld.addCollisionObject(gr);
+			//;
 			
 			var playTimer:Timer=new Timer(60);
 			playTimer.addEventListener(TimerEvent.TIMER, update);
 			playTimer.start();
-			updateHUD(0,0);
+			updateHUD(6,6);
+		}
+		
+		private function alocateBullets():void {
+			for(var i:int=20; i>0;i--) {
+				var mesh:Mesh;
+				trace(Math.floor( ((Math.random()+1.0)/1.0) * 3) );
+				switch(Math.floor( ((Math.random()+1.0)/1.0) * 3)  ) {
+					case(3.0):
+						mesh = bullet0;
+						break;
+					case(4.0):
+						mesh = bullet1;
+						break;
+					case(5.0):
+						mesh = bullet2;
+						break;
+				}
+				var bullet:Bullet = new Bullet(mesh);
+				bullets.push(bullet.collision);
+				usableBullets.push(bullet);
+				
+			}
 		}
 		
 		private function update(event:TimerEvent):void {
@@ -231,8 +282,19 @@ package
 				var enemy:Enemy = value as Enemy;
 				if(enemy == null) return;
 				enemy.update(60);
-				trace("update enemy");
+				//trace("update enemy");
 			});
+		}
+		
+		
+		public function addToPlayerScore( num:Number): void {
+			playerScore += num;
+			updateHUD(playerScore,zombieScore);
+		}
+		public function addToZombieScore( num:Number): void {
+			zombieScore += num;
+			updateHUD(playerScore,zombieScore);
+			
 		}
 		
 		private function updateHUD(playerScoreUpdate:Number,zombieScoreUpdate:Number):void {
@@ -365,7 +427,7 @@ package
 			view.scaleY = 1;
 			view.x = (sw / 2)-(w/2);
 			
-			trace("resized");
+			//trace("resized");
 		}
 		
 		
@@ -414,6 +476,9 @@ package
 			AssetLibrary.loadData(new Tomb());
 			AssetLibrary.loadData(new Ghost());
 			AssetLibrary.loadData(new MidTower());
+			AssetLibrary.loadData(new Bullet0Mesh());
+			AssetLibrary.loadData(new Bullet1Mesh());
+			AssetLibrary.loadData(new Bullet2Mesh());
 			/*.addEventListener(LoaderEvent.RESOURCE_COMPLETE, function (e:LoaderEvent){
 				if(e.asset.assetType == AssetType.MESH) {
 				 	tomb = e.asset  as Mesh;
@@ -475,8 +540,8 @@ package
 			physicsWorld.collisionCallbackOn = true;
 			physicsWorld.gravity = new Vector3D(0,0,0);//-gravity);
 			
-			debugDraw = new AWPDebugDraw(view, physicsWorld); 
-			debugDraw.debugMode |= AWPDebugDraw.DBG_DrawRay;
+			//debugDraw = new AWPDebugDraw(view, physicsWorld); 
+			//debugDraw.debugMode |= AWPDebugDraw.DBG_DrawRay;
 			//debugDraw.debugMode = AWPDebugDraw.DBG_NoDebug;
 		}
 		private function initEvents():void{
@@ -540,7 +605,91 @@ package
 					runningAnim();
 				
 			} else if (event.asset.assetType == AssetType.MESH) {
+				var bullet:Mesh;
+				var bulletMat:TextureMaterial;
 				switch(event.asset.name) {
+					case("sword2H01"):
+						bullet = event.asset as Mesh;
+						bulletMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						//create material object and assign it to our mesh
+						//tombMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						bulletMat.shadowMethod =  new FilteredShadowMapMethod(light);
+						//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+						//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+						bulletMat.lightPicker = lightPicker;
+						bulletMat.gloss = 50;
+						bulletMat.specular = 0.5;
+						bulletMat.ambientColor = 0xAAAAAA;
+						bulletMat.ambient = 0.5;
+						
+						//create mesh object and assign our animation object and material object
+						bullet.material = bulletMat;
+						bullet.castsShadows = true;
+						bullet.scale(6.0);
+						//mMesh.z = 1000;
+						bullet.rotationX = 90;
+						bullet.rotationZ = 0;
+						bullet.position = new Vector3D(0,0,0);
+						//currentScene.addChild(tomb);
+						bullet0 = bullet;
+						trace("sword2H01");
+						loadedAssets++;
+						
+					break;
+					case("hammer01"):
+						bullet = event.asset as Mesh;
+						bulletMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						//create material object and assign it to our mesh
+						//tombMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						bulletMat.shadowMethod =  new FilteredShadowMapMethod(light);
+						//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+						//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+						bulletMat.lightPicker = lightPicker;
+						bulletMat.gloss = 50;
+						bulletMat.specular = 0.5;
+						bulletMat.ambientColor = 0xAAAAAA;
+						bulletMat.ambient = 0.5;
+						
+						//create mesh object and assign our animation object and material object
+						bullet.material = bulletMat;
+						bullet.castsShadows = true;
+						bullet.scale(6.0);
+						//mMesh.z = 1000;
+						bullet.rotationX = 90;
+						bullet.rotationZ = 0;
+						bullet.position = new Vector3D(0,0,0);
+						//currentScene.addChild(tomb);
+						bullet1 = bullet;
+						trace("sword2H01");
+						loadedAssets++;
+					break;
+					case("star01"):
+						bullet = event.asset as Mesh;
+						bulletMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						//create material object and assign it to our mesh
+						//tombMat = new TextureMaterial(Cast.bitmapTexture(TombTexture));
+						bulletMat.shadowMethod =  new FilteredShadowMapMethod(light);
+						//mMaterial.normalMap = Cast.bitmapTexture(Normal);
+						//mMaterial.specularMap = Cast.bitmapTexture(Specular);
+						bulletMat.lightPicker = lightPicker;
+						bulletMat.gloss = 50;
+						bulletMat.specular = 0.5;
+						bulletMat.ambientColor = 0xAAAAAA;
+						bulletMat.ambient = 0.5;
+						
+						//create mesh object and assign our animation object and material object
+						bullet.material = bulletMat;
+						bullet.castsShadows = true;
+						bullet.scale(6.0);
+						//mMesh.z = 1000;
+						bullet.rotationX = 90;
+						bullet.rotationZ = 0;
+						bullet.position = new Vector3D(0,0,0);
+						//currentScene.addChild(tomb);
+						bullet2 = bullet;
+						trace("sword2H01");
+						loadedAssets++;
+					break;
 					case("Tomb05_c"):
 						tomb = event.asset as Mesh;
 						var tombMat:TextureMaterial = new TextureMaterial(Cast.bitmapTexture(TombTexture));

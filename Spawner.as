@@ -17,11 +17,12 @@ package
 		public function Spawner(_mesh:Mesh,_spawnRate:Number)
 		{
 			mesh = _mesh.clone() as Mesh;
+			mesh.rotationZ = -50;
 			ArtMobile.currentScene.addChild(mesh);
 			spawnTimer = new Timer(_spawnRate);
 			spawnTimer.start();
 			spawnTimer.addEventListener(TimerEvent.TIMER, function (time) {
-				trace("dagdrag");
+				//trace("dagdrag");
 				var delta:Number = spawnTimer.delay;
 				new Enemy(ArtMobile.ghost, mesh.position, 10);
 			});

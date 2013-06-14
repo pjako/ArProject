@@ -233,6 +233,16 @@ package
 		//particle animator & particle variables
 		private var animator:ParticleAnimator;
 		private var currentGhostPosition:Vector3D;
+		
+		// embed sounds
+		[Embed (source="ghostExplode.mp3" )]
+		public var ExplodeSound : Class;
+		
+		[Embed (source="musicLoop.mp3" )]
+		private var MusicLoop : Class;
+		
+		[Embed (source="wooshSound.mp3" )]
+		public var wooshSound : Class;
 
 		
 		
@@ -259,6 +269,9 @@ package
 		private function initGame():void {
 			// handles PlayerInput
 			currentController = new Controller();
+			
+			//play background music loop
+			new MusicLoop().play(0,9999);
 		}
 		
 		private function allAssetsLoaded():void {

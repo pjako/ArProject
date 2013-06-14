@@ -31,6 +31,10 @@ package
 		}
 		
 		private function onMouseDown( event:MouseEvent ):void {
+			
+			//play throw sound
+			new ArtMobile.artMobile.wooshSound().play();
+			
 			if(ArtMobile.usableBullets.length == 0) return;
 			//trace('pew pew!' + ArtMobile.view.mouseX + " " + ArtMobile.view.mouseY);
 			var relX:Number = ((ArtMobile.view.mouseX / ArtMobile.view.width) - 0.5) * 2;

@@ -50,6 +50,7 @@ package
 				
 				//create Explosion
 				ArtMobile.artMobile.createExplosion(mesh.position);
+				new ArtMobile.artMobile.ExplodeSound().play();
 				
 				ArtMobile.enemies.splice(ArtMobile.enemies.indexOf(this),1);
 				ArtMobile.currentScene.removeChild(mesh);

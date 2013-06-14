@@ -44,7 +44,13 @@ package
 		}
 		public function onCollision(e:AWPEvent):void {
 			
+		
+			
 			if(ArtMobile.bullets.indexOf(e.collisionObject) != -1) {
+				
+				//create Explosion
+				ArtMobile.artMobile.createExplosion(mesh.position);
+				
 				ArtMobile.enemies.splice(ArtMobile.enemies.indexOf(this),1);
 				ArtMobile.currentScene.removeChild(mesh);
 				ArtMobile.physicsWorld.removeCollisionObject(collision);
@@ -75,7 +81,7 @@ package
 				count = 0.05;
 			}
 			currentCount += count;
-			trace(currentCount);
+			//trace(currentCount);
 			var scale = interpolate(minCount,maxCount,currentCount);
 			collision.scale.x = scale;
 			collision.scale.y = scale;

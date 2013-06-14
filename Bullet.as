@@ -70,7 +70,7 @@ package
 		private var active:Boolean = false;
 		public function update():void {
 			if(active == false) return;
-			trace(collision.position.length);
+			//trace(collision.position.length);
 			if(collision.position.length > 3000) {
 				stop();
 				ArtMobile.usableBullets.push(this);
@@ -80,7 +80,7 @@ package
 		
 		public function onCollision(e:AWPEvent):void {
 			
-			trace('Collide' + e.collisionObject);
+			//trace('Collide' + e.collisionObject);
 		}
 	}
 }

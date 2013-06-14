@@ -14,6 +14,7 @@ package
 	import flash.events.Event;
 	import flash.events.TimerEvent;
 	import flash.external.ExternalInterface;
+	import flash.geom.Matrix3D;
 	import flash.geom.Vector3D;
 	import flash.media.Camera;
 	import flash.media.Sound;
@@ -38,10 +39,14 @@ package
 	import art.vfs.RootFSBackingStore;
 	
 	import away3d.arcane;
+	import away3d.animators.ParticleAnimationSet;
+	import away3d.animators.ParticleAnimator;
 	import away3d.animators.SkeletonAnimationSet;
 	import away3d.animators.SkeletonAnimator;
+	import away3d.animators.data.ParticleProperties;
+	import away3d.animators.data.ParticlePropertiesMode;
 	import away3d.animators.data.Skeleton;
-	import away3d.animators.nodes.SkeletonClipNode;
+	import away3d.animators.nodes.*;
 	import away3d.animators.states.AnimationClipState;
 	import away3d.animators.states.ISkeletonAnimationState;
 	import away3d.animators.states.SkeletonClipState;
@@ -50,6 +55,7 @@ package
 	import away3d.cameras.lenses.PerspectiveLens;
 	import away3d.containers.Scene3D;
 	import away3d.containers.View3D;
+	import away3d.core.base.Geometry;
 	import away3d.core.math.Vector3DUtils;
 	import away3d.core.sort.RenderableMergeSort;
 	import away3d.debug.AwayStats;
@@ -81,6 +87,8 @@ package
 	import away3d.textures.BitmapTexture;
 	import away3d.textures.PlanarReflectionTexture;
 	import away3d.textures.WebcamTexture;
+	import away3d.tools.helpers.ParticleGeometryHelper;
+	import away3d.tools.helpers.data.ParticleGeometryTransform;
 	import away3d.utils.Cast;
 	
 	import awayphysics.collision.dispatch.AWPCollisionObject;
@@ -93,6 +101,9 @@ package
 	import awayphysics.dynamics.AWPDynamicsWorld;
 	import awayphysics.dynamics.AWPRigidBody;
 	import awayphysics.events.AWPEvent;
+	import away3d.core.base.ParticleGeometry;
+
+	
 	
 	
 	
@@ -180,6 +191,12 @@ package
 		[Embed(source="../3d/morningstar01.png")]
 		private var Bullet2Texture:Class;
 		
+		private var snow:Mesh;
+		[Embed(source="../3d/snow.obj", mimeType="application/octet-stream")]
+		public static var Snow:Class;
+		[Embed(source="../3d/snow_diffuse.png")]
+		private var SnowTexture:Class;
+		
 		
 		
 		//color map
@@ -213,6 +230,10 @@ package
 		private var zombieScore:Number;
 		private var playerScore:Number;
 		
+		//particle animator & particle variables
+		private var animator:ParticleAnimator;
+		private var currentGhostPosition:Vector3D;
+
 		
 		
 		//normal map
@@ -259,7 +280,7 @@ package
 		private function alocateBullets():void {
 			for(var i:int=20; i>0;i--) {
 				var mesh:Mesh;
-				trace(Math.floor( ((Math.random()+1.0)/1.0) * 3) );
+				//trace(Math.floor( ((Math.random()+1.0)/1.0) * 3) );
 				switch(Math.floor( ((Math.random()+1.0)/1.0) * 3)  ) {
 					case(3.0):
 						mesh = bullet0;
@@ -306,6 +327,62 @@ package
 			zombieScore += num;
 			updateHUD(playerScore,zombieScore);
 			
+		}
+		
+		public function createExplosion(position:Vector3D):void {
+			
+			currentGhostPosition=position;
+			
+			//particle geometry
+			var cube:Geometry = new CubeGeometry(3, 3, 3);
+			var geometrySet:Vector.<Geometry> = new Vector.<Geometry>;
+			for (var i:int = 0; i < 50; i++)
+			{
+				geometrySet.push(cube);
+			}
+			
+			var particleGeometry:ParticleGeometry = ParticleGeometryHelper.generateGeometry(geometrySet);
+			
+			//create the particle animation set
+			var animationSet:ParticleAnimationSet = new ParticleAnimationSet(true, false, true);
+			
+			animationSet.initParticleFunc = initParticles;
+			
+			//add behaviors to the animationSet
+			animationSet.addAnimation(new ParticleBillboardNode());
+			animationSet.addAnimation(new ParticleBezierCurveNode(ParticlePropertiesMode.LOCAL_STATIC));
+			animationSet.addAnimation(new ParticlePositionNode(ParticlePropertiesMode.LOCAL_STATIC));
+			
+			
+			//create material, mesh and animator
+			var material:ColorMaterial = new ColorMaterial(0xffffff);
+			material.alphaPremultiplied = true;
+			material.lightPicker = lightPicker;
+			var particleMesh:Mesh = new Mesh(particleGeometry, material);
+			animator = new ParticleAnimator(animationSet);
+			particleMesh.animator = animator;
+			animator.start();
+			currentScene.addChild(particleMesh);
+			
+		}
+		
+		private function initParticles(prop:ParticleProperties):void
+		{
+			//defines the properties of every particle
+			
+			prop.startTime = 0;
+			prop.duration = 2;
+			var degree1:Number = Math.random() * Math.PI * 2;
+			var degree2:Number = Math.random() * Math.PI * 2;
+			var r:Number = 500;
+			var particleSize:Number=5;
+			
+	
+			prop[ParticleBezierCurveNode.BEZIER_END_VECTOR3D] = new Vector3D(200*particleSize, 0, 0);
+			
+			
+			prop[ParticleBezierCurveNode.BEZIER_CONTROL_VECTOR3D] = new Vector3D(r * Math.sin(degree1) * Math.cos(degree2), r * Math.cos(degree1) * Math.cos(degree2), 2*r * Math.sin(degree2));
+			prop[ParticlePositionNode.POSITION_VECTOR3D] = currentGhostPosition;
 		}
 		
 		private function updateHUD(playerScoreUpdate:Number,zombieScoreUpdate:Number):void {
@@ -490,6 +567,7 @@ package
 			AssetLibrary.loadData(new Bullet0Mesh());
 			AssetLibrary.loadData(new Bullet1Mesh());
 			AssetLibrary.loadData(new Bullet2Mesh());
+			AssetLibrary.loadData(new Snow());
 			/*.addEventListener(LoaderEvent.RESOURCE_COMPLETE, function (e:LoaderEvent){
 				if(e.asset.assetType == AssetType.MESH) {
 				 	tomb = e.asset  as Mesh;
@@ -586,11 +664,11 @@ package
 		
 		private function onAssetComplete(event:AssetEvent):void {
 			//Event Handler for Assets
-			trace("SKELETON " + event.asset.name + " Type: " + event.asset.assetType);
+			//trace("SKELETON " + event.asset.name + " Type: " + event.asset.assetType);
 			
 			if (event.asset.assetType == AssetType.SKELETON) {
 				
-				trace("SKELETON");
+				//trace("SKELETON");
 				//create a new skeleton animation set
 				skeletonAnimationSet = new SkeletonAnimationSet(3);
 				
@@ -607,7 +685,7 @@ package
 			} else if (event.asset.assetType == AssetType.ANIMATION_NODE) {
 				
 				
-				trace("ANIMATIONNODE");
+				//trace("ANIMATIONNODE");
 				//create animation objects for each animation node encountered
 				var animationNode:SkeletonClipNode = event.asset as SkeletonClipNode;
 				
@@ -618,6 +696,7 @@ package
 			} else if (event.asset.assetType == AssetType.MESH) {
 				var bullet:Mesh;
 				var bulletMat:TextureMaterial;
+				trace("adding... "+event.asset.name);
 				switch(event.asset.name) {
 					case("sword2H01"):
 						bullet = event.asset as Mesh;
@@ -643,7 +722,7 @@ package
 						bullet.position = new Vector3D(0,0,0);
 						//currentScene.addChild(tomb);
 						bullet0 = bullet;
-						trace("sword2H01");
+						trace(">success");
 						loadedAssets++;
 						
 					break;
@@ -671,7 +750,7 @@ package
 						bullet.position = new Vector3D(0,0,0);
 						//currentScene.addChild(tomb);
 						bullet1 = bullet;
-						trace("sword2H01");
+						trace(">success");
 						loadedAssets++;
 					break;
 					case("star01"):
@@ -698,7 +777,7 @@ package
 						bullet.position = new Vector3D(0,0,0);
 						//currentScene.addChild(tomb);
 						bullet2 = bullet;
-						trace("sword2H01");
+						trace(">success");
 						loadedAssets++;
 					break;
 					case("Tomb05_c"):
@@ -725,7 +804,7 @@ package
 						tomb.rotationZ = 0;
 						tomb.position = new Vector3D(0,0,0);
 						//currentScene.addChild(tomb);
-						trace("tomb added");
+						trace(">success");
 						loadedAssets++;
 					break;
 					case("Statue02_a"):
@@ -753,7 +832,7 @@ package
 						midTower.position = new Vector3D(0,0,0);
 						currentScene.addChild(midTower);
 						//currentScene.addChild(tomb);
-						trace("tomb added");
+						trace(">success");
 						loadedAssets++;
 					break;
 					case("polySurface1"):
@@ -781,81 +860,69 @@ package
 						ghost.position = new Vector3D(0,0,0);
 						currentScene.addChild(ghost);
 						//currentScene.addChild(tomb);
-						trace("tomb added");
+						trace(">success");
 						loadedAssets++;
 						break;
+					/**case("Star01_1"):
+						//create a snow particle system and add it to our scene
+						
+						var geometry:Geometry = (event.asset as Mesh).geometry;
+						var geometrySet:Vector.<Geometry> = new Vector.<Geometry>;
+						var transforms:Vector.<ParticleGeometryTransform> = new Vector.<ParticleGeometryTransform>();
+						var scale:Number;
+						var vertexTransform:Matrix3D;
+						var particleTransform:ParticleGeometryTransform;
+						for (var i:int = 0; i < 3000; i++)
+						{
+							geometrySet.push(geometry);
+							particleTransform = new ParticleGeometryTransform();
+							scale = Math.random()  + 1;
+							vertexTransform = new Matrix3D();
+							vertexTransform.appendScale(scale, scale, scale);
+							particleTransform.vertexTransform = vertexTransform;
+							transforms.push(particleTransform);
+						}
+						
+						var particleGeometry:Geometry = ParticleGeometryHelper.generateGeometry(geometrySet,transforms);
+						
+						
+						var particleAnimationSet:ParticleAnimationSet = new ParticleAnimationSet(true, true);
+						particleAnimationSet.addAnimation(new ParticleVelocityNode(ParticlePropertiesMode.GLOBAL, new Vector3D(0, -100, 0)));
+						particleAnimationSet.addAnimation(new ParticlePositionNode(ParticlePropertiesMode.LOCAL_STATIC));
+						particleAnimationSet.addAnimation(new ParticleOscillatorNode(ParticlePropertiesMode.LOCAL_STATIC));
+						particleAnimationSet.addAnimation(new ParticleRotationalVelocityNode(ParticlePropertiesMode.LOCAL_STATIC));
+						particleAnimationSet.initParticleFunc = initParticleFunc;
+						
+						var material:ColorMaterial = new ColorMaterial();
+						material.lightPicker = lightPicker;
+						particleMesh = new Mesh(particleGeometry, material);
+						particleMesh.bounds.fromSphere(new Vector3D(), 2000);
+						var particleAnimator:ParticleAnimator = new ParticleAnimator(particleAnimationSet);
+						particleMesh.animator = particleAnimator;
+						particleAnimator.start();
+						particleAnimator.resetTime(-10000);
+						currentScene.addChild(particleMesh); 
+						break; **/
 						
 				}
-				if(loadedAssets == loadAssets) allAssetsLoaded();
 				
 				
-				return;
-				
-				if (event.asset.name == "PolarBear") {
-					
-					//create material object and assign it to our mesh
-					mMaterial = new TextureMaterial(Cast.bitmapTexture(Diffuse));
-					mMaterial.shadowMethod =  new FilteredShadowMapMethod(light);
-					//mMaterial.normalMap = Cast.bitmapTexture(Normal);
-					//mMaterial.specularMap = Cast.bitmapTexture(Specular);
-					mMaterial.lightPicker = lightPicker;
-					mMaterial.gloss = 50;
-					mMaterial.specular = 0.5;
-					mMaterial.ambientColor = 0xAAAAAA;
-					mMaterial.ambient = 0.5;
-					
-					//create mesh object and assign our animation object and material object
-					mMesh = event.asset as Mesh;
-					mMesh.material = mMaterial;
-					mMesh.castsShadows = true;
-					//mMesh.scale(1.5);
-					//mMesh.z = 1000;
-					mMesh.rotationY = 180;
-					mMesh.position = new Vector3D(0,0,0);
-					currentScene.addChild(mMesh);
+				if(loadedAssets == loadAssets) {
+					allAssetsLoaded();
+					return;
 				}
-			} else {
-				//create particle system and add it to our scene
-				/**
-				 var geometry:Geometry = (event.asset as Mesh).geometry;
-				 var geometrySet:Vector.<Geometry> = new Vector.<Geometry>;
-				 var transforms:Vector.<ParticleGeometryTransform> = new Vector.<ParticleGeometryTransform>();
-				 var scale:Number;
-				 var vertexTransform:Matrix3D;
-				 var particleTransform:ParticleGeometryTransform;
-				 for (var i:int = 0; i < 3000; i++)
-				 {
-				 geometrySet.push(geometry);
-				 particleTransform = new ParticleGeometryTransform();
-				 scale = Math.random()  + 1;
-				 vertexTransform = new Matrix3D();
-				 vertexTransform.appendScale(scale, scale, scale);
-				 particleTransform.vertexTransform = vertexTransform;
-				 transforms.push(particleTransform);
-				 }
-				 
-				 var particleGeometry:Geometry = ParticleGeometryHelper.generateGeometry(geometrySet,transforms);
-				 
-				 
-				 var particleAnimationSet:ParticleAnimationSet = new ParticleAnimationSet(true, true);
-				 particleAnimationSet.addAnimation(new ParticleVelocityNode(ParticlePropertiesMode.GLOBAL, new Vector3D(0, -100, 0)));
-				 particleAnimationSet.addAnimation(new ParticlePositionNode(ParticlePropertiesMode.LOCAL_STATIC));
-				 particleAnimationSet.addAnimation(new ParticleOscillatorNode(ParticlePropertiesMode.LOCAL_STATIC));
-				 particleAnimationSet.addAnimation(new ParticleRotationalVelocityNode(ParticlePropertiesMode.LOCAL_STATIC));
-				 particleAnimationSet.initParticleFunc = initParticleFunc;
-				 
-				 var material:ColorMaterial = new ColorMaterial();
-				 material.lightPicker = lightPicker;
-				 particleMesh = new Mesh(particleGeometry, material);
-				 particleMesh.bounds.fromSphere(new Vector3D(), 2000);
-				 var particleAnimator:ParticleAnimator = new ParticleAnimator(particleAnimationSet);
-				 particleMesh.animator = particleAnimator;
-				 particleAnimator.start();
-				 particleAnimator.resetTime(-10000);
-				 currentScene.addChild(particleMesh); **/
+								
 			}
-			
 		}
+		
+		/**private function initParticleFunc(param:ParticleProperties):void
+		{
+			param.startTime = Math.random()*20 - 10;
+			param.duration = 20;
+			param[ParticleOscillatorNode.OSCILLATOR_VECTOR3D] = new Vector3D(Math.random() * 100 - 50, 0, Math.random() * 100 - 50, Math.random() * 2 + 3);
+			param[ParticlePositionNode.POSITION_VECTOR3D] = new Vector3D(Math.random() * 10000 - 5000, 1200, Math.random() * 10000 - 5000);
+			param[ParticleRotationalVelocityNode.ROTATIONALVELOCITY_VECTOR3D] = new Vector3D(Math.random(), Math.random(), Math.random(), Math.random() * 2 + 2);
+		}**/
 		
 		private function idleAnim():void {
 			

@@ -100,7 +100,7 @@ package
 			bullet.transform.position = event.scenePosition;*/
 		}
 		private function onObjectMouseDownCamera( event:MouseEvent3D ):void {
-			trace('Camera');
+			//trace('Camera');
 		}
 	}
 }

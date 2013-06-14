@@ -45,7 +45,7 @@ package
 		public function onCollision(e:AWPEvent):void {
 			if(ArtMobile.bullets.indexOf(e.collisionObject) != -1) {
 			}
-			trace('Collide');
+			//trace('Collide');
 		}
 		public function setLight(lightPicker:StaticLightPicker):void {
 			material.lightPicker = lightPicker;

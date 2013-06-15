@@ -56,7 +56,7 @@ package
 				ArtMobile.currentScene.removeChild(mesh);
 				ArtMobile.physicsWorld.removeCollisionObject(collision);
 				ArtMobile.artMobile.addToPlayerScore(1);
-				ArtMobile.artMobile.addToZombieScore(-1);
+				//ArtMobile.artMobile.addToZombieScore(-1);
 			}
 		}
 		
@@ -100,7 +100,7 @@ package
 				ArtMobile.enemies.splice(ArtMobile.enemies.indexOf(this),1);
 				ArtMobile.currentScene.removeChild(mesh);
 				ArtMobile.physicsWorld.removeCollisionObject(collision);
-				ArtMobile.artMobile.addToPlayerScore(-1);
+				//ArtMobile.artMobile.addToPlayerScore(-1);
 				ArtMobile.artMobile.addToZombieScore(1);
 				
 			}

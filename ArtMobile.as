@@ -12,6 +12,7 @@ package
 	import flash.display.StageScaleMode;
 	import flash.display3D.Context3DCompareMode;
 	import flash.events.Event;
+	import flash.events.MouseEvent;
 	import flash.events.TimerEvent;
 	import flash.external.ExternalInterface;
 	import flash.geom.Matrix3D;
@@ -46,7 +47,10 @@ package
 	import away3d.animators.data.ParticleProperties;
 	import away3d.animators.data.ParticlePropertiesMode;
 	import away3d.animators.data.Skeleton;
-	import away3d.animators.nodes.*;
+	import away3d.animators.nodes.ParticleBezierCurveNode;
+	import away3d.animators.nodes.ParticleBillboardNode;
+	import away3d.animators.nodes.ParticlePositionNode;
+	import away3d.animators.nodes.SkeletonClipNode;
 	import away3d.animators.states.AnimationClipState;
 	import away3d.animators.states.ISkeletonAnimationState;
 	import away3d.animators.states.SkeletonClipState;
@@ -56,6 +60,7 @@ package
 	import away3d.containers.Scene3D;
 	import away3d.containers.View3D;
 	import away3d.core.base.Geometry;
+	import away3d.core.base.ParticleGeometry;
 	import away3d.core.math.Vector3DUtils;
 	import away3d.core.sort.RenderableMergeSort;
 	import away3d.debug.AwayStats;
@@ -101,7 +106,6 @@ package
 	import awayphysics.dynamics.AWPDynamicsWorld;
 	import awayphysics.dynamics.AWPRigidBody;
 	import awayphysics.events.AWPEvent;
-	import away3d.core.base.ParticleGeometry;
 
 	
 	
@@ -215,13 +219,21 @@ package
 		public static var usableBullets:Array = new Array();
 		
 		
-		//HUD Variables
+		//HUD/ScreenInfo Variables
 		
 		private var image2Load:Bitmap;
 		private var loader:Loader;
+		private var screenLoader:Loader;
+		private var endScreenLoader:Loader;
+		private var okButton:SpriteBtn;
 		private var textFormat1:TextFormat;
 		private var textField1:TextField;
-		
+		private var restartGame:Boolean;
+		private var gameOver:Boolean;
+		private var isDifficult:Boolean;
+		private var easyButton:SpriteBtn;
+		private var hardButton:SpriteBtn;
+
 		[Embed(source="arial.ttf", fontFamily="Arial",fontWeight="bold", fontStyle="normal", advancedAntiAliasing="true",  embedAsCFF="false")]
 		private var MyFont:Class;
 		
@@ -264,6 +276,7 @@ package
 			
 			addEventListener(Event.ADDED_TO_STAGE, initStage);
 			artMobile = this;
+			restartGame=false;
 		}
 		
 		private function initGame():void {
@@ -272,22 +285,15 @@ package
 			
 			//play background music loop
 			new MusicLoop().play(0,9999);
+			
+			
 		}
 		
 		private function allAssetsLoaded():void {
 			//trace("all assets loaded");
-			var spawner:Spawner = new Spawner(tomb, 10000);
-			spawner.setPos( new Vector3D(100,100,0));
-			alocateBullets();
-			//var ground:AWPBoxShape = new AWPBoxShape(1000, 0.01, 1000);
-			//var gr:AWPCollisionObject = new AWPCollisionObject(ground, null);
-			//physicsWorld.addCollisionObject(gr);
-			//;
 			
-			var playTimer:Timer=new Timer(60);
-			playTimer.addEventListener(TimerEvent.TIMER, update);
-			playTimer.start();
-			updateHUD(6,6);
+			//show start/info screen
+			showInfoScreen("startScreen");
 		}
 		
 		private function alocateBullets():void {
@@ -315,6 +321,16 @@ package
 		
 		private var timeCount:Number = 18;
 		private function update(event:TimerEvent):void {
+			
+			//check if player has won/lost
+			if(playerScore==20 && !gameOver)
+				showInfoScreen("winScreen");
+			else if(zombieScore==20 && !gameOver)
+				showInfoScreen("gameOverScreen");
+			else if(zombieScore>=20 && playerScore >=20)
+				showInfoScreen("gameOverScreen");
+				
+			
 			enemies.forEach( function (value) {
 				var enemy:Enemy = value as Enemy;
 				if(enemy == null) return;
@@ -325,6 +341,7 @@ package
 				value.update();
 			});
 			timeCount += 0.1;
+			
 			if(timeCount >= 5.0) {
 				new Enemy(ghost, new Vector3D(40+(Math.random())*50,40+(Math.random())*50,40+(Math.random())*50), 15);
 				timeCount = 0;
@@ -396,6 +413,137 @@ package
 			
 			prop[ParticleBezierCurveNode.BEZIER_CONTROL_VECTOR3D] = new Vector3D(r * Math.sin(degree1) * Math.cos(degree2), r * Math.cos(degree1) * Math.cos(degree2), 2*r * Math.sin(degree2));
 			prop[ParticlePositionNode.POSITION_VECTOR3D] = currentGhostPosition;
+		}
+		
+		private function showInfoScreen(type:String):void {
+			
+			if(type=="startScreen") {
+				
+				//Load BG Image for HUD
+				screenLoader = new Loader();
+				screenLoader.contentLoaderInfo.addEventListener(Event.COMPLETE, completeHandler);
+				var request:URLRequest = new URLRequest("startHUD.png");
+				screenLoader.load(request);
+				screenLoader.x=150;
+				screenLoader.y=50;
+				addChild(screenLoader);
+				
+				//add Button
+				
+				okButton = new SpriteBtn("retryButton.png","",15);		
+				//okButton.resize(300,200,147,44);
+				okButton.x=325;
+				okButton.y=385;
+				okButton.visible=false;
+				addChild(okButton);
+				
+				//difficulty buttons
+				easyButton=new SpriteBtn("easyButton.png","",15);
+				hardButton=new SpriteBtn("hardButton.png","",15);
+				easyButton.name="easyButton";
+				hardButton.name="hardButton";
+				easyButton.addEventListener(MouseEvent.MOUSE_DOWN,startGame);
+				hardButton.addEventListener(MouseEvent.MOUSE_DOWN,startGame);
+				easyButton.visible=true;
+				hardButton.visible=true;
+				easyButton.x=310;
+				easyButton.y=380;
+				hardButton.x=470;
+				hardButton.y=380;
+				
+				addChild(easyButton);
+				addChild(hardButton);
+				restartGame=false;
+				
+				//add eventlistener to button, if clicked, start/restart game
+				okButton.addEventListener(MouseEvent.MOUSE_DOWN,startGame);
+						
+			}
+			else if(type=="gameOverScreen") {
+				
+				gameOver=true;
+				
+				//Load BG Image for HUD
+
+				var request2:URLRequest = new URLRequest("loseScreen.png");
+				screenLoader.load(request2);
+				screenLoader.x=150;
+				screenLoader.y=100;
+
+				restartGame=true;
+				
+				screenLoader.visible=true;
+				okButton.visible=true;
+				
+				
+			}
+			else if(type=="winScreen") {
+				
+				gameOver=true;
+				
+				//Load BG Image for HUD
+				
+				var request3:URLRequest = new URLRequest("winScreen.png");
+				screenLoader.load(request3);
+				screenLoader.x=150;
+				screenLoader.y=100;
+
+				restartGame=true;
+				
+				screenLoader.visible=true;
+				okButton.visible=true;
+				
+				
+			}
+
+			
+		}
+		
+		
+		private function startGame(e:MouseEvent):void {
+			
+			//set difficulty
+			
+			if(e.currentTarget.name=="easyButton")
+				isDifficult=false;
+			else if(e.currentTarget.name=="hardButton")
+				isDifficult=true;
+			
+			
+			gameOver=false;
+			
+			//hide info Screen/button
+		
+			screenLoader.visible=false;
+			okButton.visible=false;
+			hardButton.visible=false;
+			easyButton.visible=false;
+
+			
+			//only on startup, not restart
+			if(!restartGame) {
+				
+				screenLoader.visible=false;
+				okButton.visible=false;
+				
+				var spawner:Spawner = new Spawner(tomb, 10000);
+				spawner.setPos( new Vector3D(100,100,0));
+				alocateBullets();
+				//var ground:AWPBoxShape = new AWPBoxShape(1000, 0.01, 1000);
+				//var gr:AWPCollisionObject = new AWPCollisionObject(ground, null);
+				//physicsWorld.addCollisionObject(gr);
+				//;
+				
+				var playTimer:Timer=new Timer(60);
+				playTimer.addEventListener(TimerEvent.TIMER, update);
+				playTimer.start();
+				
+			}
+
+	
+			updateHUD(0,0);
+			
+			
 		}
 		
 		private function updateHUD(playerScoreUpdate:Number,zombieScoreUpdate:Number):void {

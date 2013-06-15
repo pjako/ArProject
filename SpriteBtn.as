@@ -3,13 +3,15 @@ package {
 	import flash.display.BitmapData;
 	import flash.display.Loader;
 	import flash.display.Sprite;
-	import flash.events.*;
+	import flash.events.Event;
+	import flash.events.IOErrorEvent;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 	import flash.net.URLRequest;
-	import flash.text.*;
-	
-	import away3d.containers.*;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
 	
 	
 	
@@ -20,12 +22,13 @@ package {
 		public var textField:TextField;
 		private var image:Bitmap;
 		private var done:Function;
+		private var loader:Loader;
 		
 		[Embed(source="arial.ttf", fontFamily="Arial",fontWeight="bold", fontStyle="normal", advancedAntiAliasing="true",  embedAsCFF="false")]
 		private var MyFont:Class;
 		
 		public function SpriteBtn(_url:String, _text:String, _textSize:int) {
-			Font.registerFont(MyFont);
+			//Font.registerFont(MyFont);
 			url = _url;
 			textFormat = new TextFormat();
 			textFormat.color = 0xFFFFFF;
@@ -34,15 +37,17 @@ package {
 			textFormat.size = _textSize;
 			
 			textField = new TextField();
-			textField.embedFonts = true;
+			//textField.embedFonts = true; //not working?!?
 			textField.antiAliasType = AntiAliasType.ADVANCED;
 			textField.text =  _text;
 			textField.defaultTextFormat = textFormat;
+			textField.background = false;
+			textField.selectable = false;
 			loadBackgroundImage();
 		}
 		
 		private function loadBackgroundImage():void {
-			var loader:Loader = new Loader();
+			loader = new Loader();
 			loader.contentLoaderInfo.addEventListener(Event.COMPLETE, completeHandler);
 			//loader.contentLoaderInfo.addEventListener(Event.COMPLETE, done);
 			loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, ioErrorHandler);
@@ -53,11 +58,12 @@ package {
 		}
 		
 		private function completeHandler(event:Event):void {
-			var loader:Loader = Loader(event.target.loader);
-			image = Bitmap(loader.content);
-			//addChild(image);
-			this.addChild(textField);
-			trace("Loaded: "+event.toString());
+
+			var vctr:Sprite = new Sprite();
+			//only works with sprite?
+			vctr.addChild(textField);
+			this.addChild(vctr);
+			//trace("Loaded: "+event.toString());
 			
 		}
 		
@@ -94,6 +100,12 @@ package {
 			textField.height = h *0.8;
 			textField.x = w * 0.1;
 			textField.y = h * 0.1;
+		}
+		
+		public function setImage(imgUrl:String):void {
+			
+			var urlRequest:URLRequest = new URLRequest(imgUrl);
+			loader.load(urlRequest);
 		}
 		
 		public function setText(text:String):void

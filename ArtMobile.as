@@ -217,6 +217,7 @@ package
 		public static var bullets:Array = new Array();
 		private static var bulletsUpdate:Array = new Array();
 		public static var usableBullets:Array = new Array();
+		private var spawner:Spawner;
 		
 		
 		//HUD/ScreenInfo Variables
@@ -321,6 +322,11 @@ package
 		
 		private var timeCount:Number = 18;
 		private function update(event:TimerEvent):void {
+			if(tracker1.position.x+tracker1.position.y+tracker1.position.z <> 0) {
+				spawner.setPos(tracker1.position);
+				spawner.setRot(tracker1.rotation);
+			}
+			
 			
 			//check if player has won/lost
 			if(playerScore==20 && !gameOver)
@@ -526,7 +532,7 @@ package
 				screenLoader.visible=false;
 				okButton.visible=false;
 				
-				var spawner:Spawner = new Spawner(tomb, 10000);
+				spawner = new Spawner(tomb, 10000);
 				spawner.setPos( new Vector3D(100,100,0));
 				alocateBullets();
 				//var ground:AWPBoxShape = new AWPBoxShape(1000, 0.01, 1000);
@@ -538,6 +544,14 @@ package
 				playTimer.addEventListener(TimerEvent.TIMER, update);
 				playTimer.start();
 				
+			} else {
+				// kill all enemies when the game restarts
+				enemies.forEach( function (value) {
+					var enemy:Enemy = value as Enemy;
+					if(enemy == null) return;
+					enemy.forceKill();
+					//trace("update enemy");
+				});
 			}
 
 	

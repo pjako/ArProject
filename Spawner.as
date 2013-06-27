@@ -30,5 +30,8 @@ package
 		public function setPos(pos:Vector3D):void {
 			mesh.position = pos;
 		}
+		public function setRot(rot:Vector3D):void {
+			mesh.rotateTo(rot.x,rot.y,rot.z);
+		}
 	}
 }

@@ -72,7 +72,7 @@ package
 			var force:Vector3D = mesh.position.clone();
 			force.negate();
 			force.normalize();
-			force.scaleBy(3);
+			force.scaleBy(5);
 			collision.applyCentralForce(force);
 			//mesh.scale(mesh.scaleX + 1.0);
 			if(currentCount > 1.0) {
@@ -96,16 +96,22 @@ package
 
 			//mesh.translate(mesh.position, -3);
 			
-			if(mesh.position.length < 3.5) {
+			if(collision.position.length < 16.5) {
 				ArtMobile.enemies.splice(ArtMobile.enemies.indexOf(this),1);
 				ArtMobile.currentScene.removeChild(mesh);
 				ArtMobile.physicsWorld.removeCollisionObject(collision);
 				//ArtMobile.artMobile.addToPlayerScore(-1);
-				ArtMobile.artMobile.addToZombieScore(1);
+				// one point was to easy so we add two!
+				ArtMobile.artMobile.addToZombieScore(2);
 				
 			}
 			
 			//trace('dööörb');
+		}
+		public function forceKill():void {
+			ArtMobile.enemies.splice(ArtMobile.enemies.indexOf(this),1);
+			ArtMobile.currentScene.removeChild(mesh);
+			ArtMobile.physicsWorld.removeCollisionObject(collision);
 		}
 	}
 }

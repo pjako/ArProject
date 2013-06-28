@@ -347,11 +347,12 @@ package
 				value.update();
 			});
 			timeCount += 0.1;
-			
+			/* Only spawn from the spawner and not random!
 			if(timeCount >= 5.0) {
 				new Enemy(ghost, new Vector3D(40+(Math.random())*50,40+(Math.random())*50,40+(Math.random())*50), 15);
 				timeCount = 0;
 			}
+			*/
 		}
 		
 		

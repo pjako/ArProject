@@ -30,8 +30,10 @@ package
 		public function setPos(pos:Vector3D):void {
 			mesh.position = pos;
 		}
+		// done for marker
 		public function setRot(rot:Vector3D):void {
-			mesh.rotateTo(rot.x,rot.y,rot.z);
+
+			mesh.rotateTo(rot.x + 90,rot.y,rot.z);
 		}
 	}
 }

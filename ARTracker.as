@@ -28,7 +28,7 @@ package
 		private static var bgTextureResolution:Number = 128;
 		// marker ids
 		private static var marker1Id:Number = 6;
-		private static var marker2Id:Number = 7;
+		private static var marker2Id:Number = 11;
 		private static var marker3Id:Number = 1;
 	
 		private var rgbaArray:ByteArray;
